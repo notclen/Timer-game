@@ -1133,6 +1133,21 @@ body::after {
       </div>
     </div>
 
+    <!-- Team Scores Panel (Only shown in Team Mode) -->
+    <div id="results-team-panel" class="team-score-panel panel" style="display:none; width:100%; max-width:600px;">
+      <div class="panel-header" id="results-team-header">👥 Team Standing</div>
+      <div class="team-score-row">
+        <div class="team-score-card" style="border-left: 6px solid #4a9eff;">
+          <div class="team-label" style="color:#4a9eff;">🔵 Team A</div>
+          <div class="team-total" id="results-team-a-score">0</div>
+        </div>
+        <div class="team-score-card" style="border-left: 6px solid #e63946;">
+          <div class="team-label" style="color:#e63946;">🔴 Team B</div>
+          <div class="team-total" id="results-team-b-score">0</div>
+        </div>
+      </div>
+    </div>
+
     <div class="scores-container" id="scores-container"></div>
 
     <div class="leaderboard-container panel" id="leaderboard-container">
@@ -1152,6 +1167,21 @@ body::after {
     <div class="winner-name" id="winner-name">Player 1</div>
     <div class="winner-subtitle">Wins Time Attack!</div>
     <div class="winner-score-display" id="winner-score">350 PTS</div>
+
+    <!-- Final Team Standing -->
+    <div id="final-team-panel" class="team-score-panel panel" style="display:none; width:100%; max-width:600px;">
+      <div class="panel-header" id="final-team-header">👥 Team Standing</div>
+      <div class="team-score-row">
+        <div class="team-score-card" style="border-left: 6px solid #4a9eff;">
+          <div class="team-label" style="color:#4a9eff;">🔵 Team A</div>
+          <div class="team-total" id="final-team-a-score">0</div>
+        </div>
+        <div class="team-score-card" style="border-left: 6px solid #e63946;">
+          <div class="team-label" style="color:#e63946;">🔴 Team B</div>
+          <div class="team-total" id="final-team-b-score">0</div>
+        </div>
+      </div>
+    </div>
 
     <div class="final-standings panel" id="final-standings">
       <div class="panel-header">🏆 Final Standings</div>
@@ -1712,6 +1742,17 @@ body::after {
             `;
             listContainer.appendChild(row);
           });
+
+          // Update teams assignment/roster UI
+          const teamMap = {};
+          players.forEach(p => {
+            teamMap[p.id] = p.team || 'A';
+          });
+          if (this.isHost) {
+            this.updateTeamAssignmentUI(teamMap);
+          } else {
+            this.updateGuestSettingsUI();
+          }
         });
 
         this.socket.on('room:youAreHost', () => {
@@ -1851,7 +1892,7 @@ body::after {
           }, 1500);
         });
 
-        this.socket.on('round:results', ({ roundNum, targetTime, gameMode, results, leaderboard, isGameComplete }) => {
+        this.socket.on('round:results', ({ roundNum, targetTime, gameMode, results, leaderboard, isGameComplete, teamScores, teamScoringRule }) => {
           game.currentRound = roundNum;
           game.targetTime = targetTime;
           game.gameMode = gameMode;
@@ -1869,6 +1910,22 @@ body::after {
             const idx = this.players.findIndex(p => p.name === entry.name);
             if (idx !== -1) game.scores[idx] = entry.totalScore;
           });
+
+          // Render Team scores if available
+          const teamPanel = document.getElementById('results-team-panel');
+          if (teamScores) {
+            teamPanel.style.display = '';
+            const ruleText = teamScoringRule === 'average' ? ' (Average)' : ' (Sum)';
+            document.getElementById('results-team-header').textContent = '👥 Team Standing' + ruleText;
+            
+            const scoreA = teamScoringRule === 'average' ? teamScores.A.average : teamScores.A.total;
+            const scoreB = teamScoringRule === 'average' ? teamScores.B.average : teamScores.B.total;
+            
+            document.getElementById('results-team-a-score').textContent = scoreA + ' pts';
+            document.getElementById('results-team-b-score').textContent = scoreB + ' pts';
+          } else {
+            teamPanel.style.display = 'none';
+          }
 
           game.finalizeRound();
 
@@ -1912,7 +1969,7 @@ body::after {
           document.getElementById('results-screen').scrollTop = 0;
         });
 
-        this.socket.on('game:final', ({ leaderboard, history }) => {
+        this.socket.on('game:final', ({ leaderboard, history, teamScores, teamScoringRule }) => {
           game.history = history;
           
           const winnerName = leaderboard[0] ? leaderboard[0].name : 'Unknown';
@@ -1935,6 +1992,22 @@ body::after {
             `;
             rows.appendChild(row);
           });
+
+          // Render Team scores on final screen if available
+          const finalTeamPanel = document.getElementById('final-team-panel');
+          if (teamScores) {
+            finalTeamPanel.style.display = '';
+            const ruleText = teamScoringRule === 'average' ? ' (Average)' : ' (Sum)';
+            document.getElementById('final-team-header').textContent = '👥 Team Standing' + ruleText;
+
+            const scoreA = teamScoringRule === 'average' ? teamScores.A.average : teamScores.A.total;
+            const scoreB = teamScoringRule === 'average' ? teamScores.B.average : teamScores.B.total;
+
+            document.getElementById('final-team-a-score').textContent = scoreA + ' pts';
+            document.getElementById('final-team-b-score').textContent = scoreB + ' pts';
+          } else {
+            finalTeamPanel.style.display = 'none';
+          }
 
           const playAgainBtn = document.getElementById('play-again-btn');
           const viewStatsBtn = document.getElementById('view-stats-btn');
