@@ -1256,10 +1256,17 @@ body::after {
       </div>
 
       <div class="relay-turn-card" id="relay-turn-card">
-        <div class="relay-turn-label" id="relay-turn-label">YOUR TURN</div>
-        <div class="relay-turn-player" id="relay-turn-player">Waiting...</div>
-        <div class="relay-turn-input-area" id="relay-turn-input-area" style="display:none; align-items:center; flex-direction:column;">
-          <div class="blind-guess-prompt" id="relay-buzzer-instruction">Tap to guess exactly 3.0 seconds!</div>
+        <div class="relay-turn-label" id="relay-turn-label">CURRENT PLAYERS</div>
+        <div id="relay-active-players-display" style="display: flex; flex-direction: column; gap: 10px; margin: 16px 0; align-items: center;">
+          <div style="font-size: 2.2rem; font-family: var(--font-heading); text-shadow: 2px 2px 0 var(--border-subtle); display: flex; align-items: center; gap: 8px;">
+            <span>🔵</span> <span id="relay-active-a" style="color: #4a9eff;">Player A</span>
+          </div>
+          <div style="font-size: 2.2rem; font-family: var(--font-heading); text-shadow: 2px 2px 0 var(--border-subtle); display: flex; align-items: center; gap: 8px;">
+            <span>🔴</span> <span id="relay-active-b" style="color: #e63946;">Player B</span>
+          </div>
+        </div>
+        <div class="relay-turn-input-area" id="relay-turn-input-area" style="display:none; align-items:center; flex-direction:column; margin-top: 12px;">
+          <div class="blind-guess-prompt" id="relay-buzzer-instruction" style="font-size: 1.2rem; font-weight: 700; color: var(--gold);">Tap to guess exactly 3.0 seconds!</div>
           <div class="buzzer-wrapper" style="margin: 15px 0;">
             <div class="buzzer-ring"></div>
             <div class="buzzer-ring"></div>
@@ -1268,7 +1275,7 @@ body::after {
             </button>
           </div>
         </div>
-        <div class="relay-waiting-message" id="relay-waiting-message" style="display:none;">
+        <div class="relay-waiting-message" id="relay-waiting-message" style="display:none; font-size: 1.2rem; font-weight: bold; margin-top: 8px;">
           Waiting for other players...
         </div>
       </div>
@@ -1279,16 +1286,24 @@ body::after {
   <div id="relay-reveal-screen" class="screen">
     <div class="relay-reveal-container">
       <div class="relay-target-badge" id="relay-reveal-target">🎯 TARGET: 30.0 SECONDS</div>
-      <h2 class="heading heading-lg" style="text-align:center; margin-bottom: 8px;">ROUND-BY-ROUND REVEAL</h2>
-
       <div class="relay-progress-container">
         <div style="display:flex; justify-content:space-between; margin-bottom: 4px;">
-          <span class="label" style="color:#4a9eff;">🔵 Team A</span>
-          <span class="label" style="color:#e63946;">🔴 Team B</span>
+          <span class="label" style="color:#4a9eff; font-size: 1.1rem; font-weight: bold;">🔵 Team A</span>
+          <span class="label" style="color:#e63946; font-size: 1.1rem; font-weight: bold;">🔴 Team B</span>
         </div>
       </div>
 
-      <div id="relay-reveal-rounds" style="width:100%; display:flex; flex-direction:column; gap:12px;"></div>
+      <div id="relay-reveal-rounds" style="width:100%; display:flex; flex-direction:column; gap:12px; max-height: 400px; overflow-y: auto; padding: 4px;"></div>
+      
+      <!-- Host reveal controls -->
+      <div id="relay-host-reveal-controls" style="display:none; gap:16px; margin-top: 20px; width: 100%; justify-content: center;">
+        <button id="relay-reveal-next-btn" class="btn btn-green" type="button" style="flex:1; max-width: 200px; font-size: 1.1rem;">REVEAL NEXT</button>
+        <button id="relay-reveal-auto-btn" class="btn btn-gold" type="button" style="flex:1; max-width: 200px; font-size: 1.1rem;">AUTO-REVEAL</button>
+      </div>
+      <!-- Guest status message -->
+      <div id="relay-guest-reveal-status" class="relay-waiting-message" style="display:none; margin-top: 20px; font-size: 1.2rem;">
+        Waiting for host to reveal rounds...
+      </div>
     </div>
   </div>
 
@@ -2056,13 +2071,14 @@ body::after {
           document.getElementById('relay-target-badge').textContent = `🎯 TARGET: ${targetTime.toFixed(1)} SECONDS`;
           document.getElementById('relay-tally-a').textContent = `🔵 Team A: Turn 1`;
           document.getElementById('relay-tally-b').textContent = `🔴 Team B: Turn 1`;
+          document.getElementById('relay-active-a').textContent = 'Waiting...';
+          document.getElementById('relay-active-b').textContent = 'Waiting...';
           document.getElementById('relay-progress-a').style.width = '0%';
           document.getElementById('relay-progress-b').style.width = '0%';
 
           document.getElementById('relay-turn-input-area').style.display = 'none';
-          document.getElementById('relay-waiting-message').style.display = '';
+          document.getElementById('relay-waiting-message').style.display = 'flex';
           document.getElementById('relay-waiting-message').textContent = 'Starting...';
-          document.getElementById('relay-turn-player').textContent = 'Get Ready!';
           document.getElementById('relay-turn-label').textContent = 'RELAY COUNTDOWN';
 
           showScreen('relay-game-screen');
@@ -2070,8 +2086,6 @@ body::after {
 
         this.socket.on('relay:yourTurn', ({ team, turnTarget, turnNumber }) => {
           document.getElementById('relay-turn-label').textContent = `TURN ${turnNumber} — YOUR TURN!`;
-          document.getElementById('relay-turn-player').textContent = `Guess ${turnTarget} seconds!`;
-          document.getElementById('relay-turn-player').style.color = team === 'A' ? '#4a9eff' : '#e63946';
           document.getElementById('relay-turn-input-area').style.display = 'flex';
           document.getElementById('relay-waiting-message').style.display = 'none';
 
@@ -2092,19 +2106,25 @@ body::after {
           if (team === 'A') {
             document.getElementById('relay-progress-a').style.width = pct + '%';
             document.getElementById('relay-tally-a').textContent = `🔵 Team A: Turn ${turnNumber} (${currentPlayerName})`;
+            
+            const activeEl = document.getElementById('relay-active-a');
+            activeEl.textContent = currentPlayerName + (currentPlayerId === this.playerId ? ' (YOU)' : '');
+            activeEl.style.fontWeight = currentPlayerId === this.playerId ? 'bold' : 'normal';
           } else {
             document.getElementById('relay-progress-b').style.width = pct + '%';
             document.getElementById('relay-tally-b').textContent = `🔴 Team B: Turn ${turnNumber} (${currentPlayerName})`;
+            
+            const activeEl = document.getElementById('relay-active-b');
+            activeEl.textContent = currentPlayerName + (currentPlayerId === this.playerId ? ' (YOU)' : '');
+            activeEl.style.fontWeight = currentPlayerId === this.playerId ? 'bold' : 'normal';
           }
 
           if (currentPlayerId !== this.playerId) {
             const myTeam = this.players.find(p => p.id === this.playerId)?.team;
             if (team === myTeam) {
               document.getElementById('relay-turn-label').textContent = `TURN ${turnNumber}`;
-              document.getElementById('relay-turn-player').textContent = currentPlayerName + "'s turn";
-              document.getElementById('relay-turn-player').style.color = team === 'A' ? '#4a9eff' : '#e63946';
               document.getElementById('relay-turn-input-area').style.display = 'none';
-              document.getElementById('relay-waiting-message').style.display = '';
+              document.getElementById('relay-waiting-message').style.display = 'flex';
               document.getElementById('relay-waiting-message').textContent = `Waiting for ${currentPlayerName} to guess ${turnTarget}s...`;
             }
           }
@@ -2129,8 +2149,33 @@ body::after {
         this.socket.on('relay:revealStart', ({ targetTime, totalRounds }) => {
           document.getElementById('relay-reveal-target').textContent = `🎯 TARGET: ${targetTime.toFixed(1)} SECONDS`;
           document.getElementById('relay-reveal-rounds').innerHTML = '';
+          
+          const hostControls = document.getElementById('relay-host-reveal-controls');
+          const guestStatus = document.getElementById('relay-guest-reveal-status');
+
+          if (this.isHost) {
+            hostControls.style.display = 'flex';
+            guestStatus.style.display = 'none';
+            const nextBtn = document.getElementById('relay-reveal-next-btn');
+            nextBtn.textContent = 'REVEAL NEXT';
+            nextBtn.disabled = false;
+            document.getElementById('relay-reveal-auto-btn').disabled = false;
+          } else {
+            hostControls.style.display = 'none';
+            guestStatus.style.display = 'block';
+            guestStatus.textContent = 'Waiting for host to reveal rounds...';
+          }
+
           showScreen('relay-reveal-screen');
           audio.goBeep();
+        });
+
+        this.socket.on('relay:revealReadyForFinal', () => {
+          if (this.isHost) {
+            const nextBtn = document.getElementById('relay-reveal-next-btn');
+            nextBtn.textContent = 'SHOW FINAL WINNER';
+            document.getElementById('relay-reveal-auto-btn').disabled = true;
+          }
         });
 
         this.socket.on('relay:revealRound', (data) => {
@@ -2153,7 +2198,7 @@ body::after {
             <div class="reveal-total" style="color:var(--text-muted);">Target: ${data.turnTarget.toFixed(1)}s (±${b.diff.toFixed(2)}s)</div>
           </div>`;
 
-          card.innerHTML = `<div class="label" style="grid-column:1/-1; text-align:center; margin-bottom:4px;">Round ${data.roundNumber} (Target: ${data.turnTarget.toFixed(1)}s)</div>${aHTML}${bHTML}`;
+          card.innerHTML = `<div class="label" style="grid-column:1/-1; text-align:center; margin-bottom:4px; text-transform: uppercase;">Round ${data.roundNumber}</div>${aHTML}${bHTML}`;
           container.appendChild(card);
 
           container.scrollTop = container.scrollHeight;
@@ -2580,6 +2625,17 @@ body::after {
     // Relay play again
     document.getElementById('relay-play-again-btn').addEventListener('click', () => {
       net.playAgain();
+    });
+
+    // Relay reveal controls
+    document.getElementById('relay-reveal-next-btn').addEventListener('click', () => {
+      net.socket.emit('relay:revealNext');
+    });
+
+    document.getElementById('relay-reveal-auto-btn').addEventListener('click', () => {
+      document.getElementById('relay-reveal-next-btn').disabled = true;
+      document.getElementById('relay-reveal-auto-btn').disabled = true;
+      net.socket.emit('relay:revealAuto');
     });
 
     // Host Start Game
