@@ -13,6 +13,11 @@ const io = new Server(server, { cors: { origin: '*' } });
 // Serve the client from public/
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Fallback to serve index.html for root access
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 const rooms = new Map(); // code → Room
 
 function generateRoomCode() {
