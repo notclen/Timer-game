@@ -589,12 +589,157 @@ body::after {
 }
 
 
+  <script src="/socket.io/socket.io.js"></script>
 </style>
 </head>
 <body>
 
+  <!-- ===== MODE SELECT SCREEN ===== -->
+  <div id="mode-select-screen" class="screen active">
+    <div class="setup-container">
+      <div class="logo-area">
+        <div class="logo-badge">Party Game</div>
+        <h1 class="logo-title">TIME <span class="accent">ATTACK</span></h1>
+        <p class="logo-subtitle">How good is your internal clock?</p>
+      </div>
+      
+      <div class="panel">
+        <div class="panel-header">🎮 Choose Game Mode</div>
+        <div class="panel-body" style="display: flex; flex-direction: column; gap: 16px; padding: 24px;">
+          <button id="mode-online-btn" class="btn btn-green" type="button" style="width: 100%; font-size: 1.5rem; padding: 20px;">🌐 PLAY ONLINE</button>
+          <button id="mode-local-btn" class="btn btn-blue" type="button" style="width: 100%; font-size: 1.5rem; padding: 20px;">📱 PASS & PLAY</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ONLINE LOBBY SCREEN (JOIN/CREATE) ===== -->
+  <div id="online-lobby-screen" class="screen">
+    <div class="setup-container">
+      <div class="logo-area">
+        <div class="logo-badge">Party Game</div>
+        <h1 class="logo-title">TIME <span class="accent">ATTACK</span></h1>
+      </div>
+
+      <button id="online-lobby-back-btn" class="btn btn-dark" type="button" style="align-self: flex-start; margin-bottom: 12px; padding: 8px 16px; font-size: 0.9rem;">← Back</button>
+
+      <div class="panel">
+        <div class="panel-header">👤 Player Info</div>
+        <div class="panel-body">
+          <div class="setting-group">
+            <label class="label" for="online-name-input">Display Name</label>
+            <input id="online-name-input" class="input-field" type="text" placeholder="Enter name" maxlength="16">
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">🔑 Join or Create Room</div>
+        <div class="panel-body" style="display: flex; flex-direction: column; gap: 16px;">
+          <button id="room-create-btn" class="btn btn-green" type="button" style="width: 100%;">Create New Room</button>
+          
+          <div style="text-align: center; font-family: var(--font-heading); color: var(--text-muted); font-size: 0.8rem; margin: 8px 0;">— OR JOIN EXISTING —</div>
+          
+          <div class="setting-group">
+            <label class="label" for="room-code-input">Room Code</label>
+            <input id="room-code-input" class="input-field" type="text" placeholder="4-Letter Code" style="text-transform: uppercase; text-align: center; font-size: 1.4rem; letter-spacing: 4px;">
+          </div>
+          <button id="room-join-btn" class="btn btn-blue" type="button" style="width: 100%;">Join Room</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ONLINE WAITING ROOM SCREEN ===== -->
+  <div id="waiting-room-screen" class="screen">
+    <div class="setup-container">
+      <div class="logo-area">
+        <div class="logo-badge">Party Game</div>
+        <h1 class="logo-title">TIME <span class="accent">ATTACK</span></h1>
+      </div>
+
+      <button id="waiting-room-back-btn" class="btn btn-dark" type="button" style="align-self: flex-start; margin-bottom: 12px; padding: 8px 16px; font-size: 0.9rem;">← Leave Room</button>
+
+      <div class="panel" style="text-align: center;">
+        <div class="panel-header">🔑 Room Code</div>
+        <div class="panel-body">
+          <div id="waiting-room-code" style="font-family: var(--font-heading); font-size: 3rem; color: var(--gold); letter-spacing: 6px; text-shadow: 4px 4px 0 var(--border-subtle); margin: 8px 0;">CODE</div>
+          <div style="font-size: 0.9rem; color: var(--text-secondary); font-weight: 600;">Share this code with your friends!</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">👥 Players Connected (<span id="waiting-room-count">0</span>/12)</div>
+        <div class="panel-body">
+          <div id="waiting-player-list" class="player-list"></div>
+        </div>
+      </div>
+
+      <!-- Host Settings Panel (only active for host) -->
+      <div id="host-settings-panel" class="panel" style="display: none;">
+        <div class="panel-header">⚙️ Game Settings (Host Controls)</div>
+        <div class="panel-body">
+          <div class="settings-grid three-col">
+            <div class="setting-group">
+              <label class="label" for="online-game-mode-select">Game Mode</label>
+              <select id="online-game-mode-select">
+                <option value="timeattack" selected>⏱ Time Attack</option>
+                <option value="blindguess">🙈 Blind Guess</option>
+              </select>
+            </div>
+            <div class="setting-group">
+              <label class="label" for="online-rounds-select">Rounds</label>
+              <select id="online-rounds-select">
+                <option value="1">1 Round</option>
+                <option value="3" selected>3 Rounds</option>
+                <option value="5">5 Rounds</option>
+                <option value="7">7 Rounds</option>
+                <option value="10">10 Rounds</option>
+              </select>
+            </div>
+            <div class="setting-group" id="online-time-mode-group">
+              <label class="label" for="online-time-mode-select">Target Time</label>
+              <select id="online-time-mode-select">
+                <option value="random" selected>Random</option>
+                <option value="custom">Custom</option>
+              </select>
+            </div>
+          </div>
+          <div id="online-custom-time-group" class="setting-group" style="display:none; margin-top: 12px;">
+            <label class="label" for="online-custom-time-input">Target (seconds)</label>
+            <input id="online-custom-time-input" class="input-field" type="number" min="1" max="15" step="0.25" value="4.00">
+          </div>
+          <div id="online-blind-range-group" class="setting-group" style="display:none; margin-top: 12px;">
+            <label class="label">Hidden Timer Range (seconds)</label>
+            <div class="blind-range-row">
+              <input id="online-blind-min-input" class="input-field" type="number" min="2" max="30" step="1" value="3">
+              <span class="range-sep">to</span>
+              <input id="online-blind-max-input" class="input-field" type="number" min="2" max="60" step="1" value="15">
+              <span class="range-sep">SEC</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guest Settings Status Panel (only active for non-hosts) -->
+      <div id="guest-settings-panel" class="panel">
+        <div class="panel-header">⚙️ Room Settings</div>
+        <div class="panel-body" style="font-size: 0.95rem; font-weight: 600; line-height: 1.6;">
+          <div>🎮 Mode: <span id="guest-setting-mode" style="color: var(--gold);">Time Attack</span></div>
+          <div>🔄 Rounds: <span id="guest-setting-rounds" style="color: var(--gold);">3 Rounds</span></div>
+          <div id="guest-setting-time-row">🎯 Target: <span id="guest-setting-time" style="color: var(--gold);">Random</span></div>
+        </div>
+      </div>
+
+      <div class="start-area">
+        <button id="online-start-game-btn" class="btn btn-green" type="button" style="width: 100%; font-size: 1.8rem; padding: 18px;" disabled>START GAME</button>
+        <div id="online-start-warning" style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600; margin-top: 8px;">Waiting for host to configure... Need at least 2 players connected.</div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== SETUP SCREEN ===== -->
-  <div id="setup-screen" class="screen active">
+  <div id="setup-screen" class="screen">
     <div class="setup-container">
       <div class="logo-area">
         <div class="logo-badge">Party Game</div>
@@ -818,10 +963,11 @@ body::after {
     // ===== PLAYER COLORS =====
     const PLAYER_COLORS = [
       '#4a9eff', '#e63946', '#ffc312', '#2ed573',
-      '#a55eea', '#ff9f43', '#1abc9c', '#ff6b81'
+      '#a55eea', '#ff9f43', '#1abc9c', '#ff6b81',
+      '#6c5ce7', '#fdcb6e', '#00b894', '#e17055'
     ];
 
-    const RANK_ICONS = ['🥇', '🥈', '🥉', '4', '5', '6', '7', '8'];
+    const RANK_ICONS = ['🥇', '🥈', '🥉', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
 
     // ===== AUDIO ENGINE =====
     class AudioEngine {
@@ -1104,11 +1250,619 @@ body::after {
 
     const game = new GameState();
 
+    // ===== MULTIPLAYER NETWORK CLIENT =====
+    class NetworkClient {
+      constructor() {
+        this.socket = null;
+        this.roomCode = null;
+        this.playerId = null;
+        this.playerName = null;
+        this.isHost = false;
+        this.players = [];
+        this.settings = {};
+      }
+
+      init() {
+        if (this.socket) return;
+        
+        // Connect to server (protocol relative)
+        this.socket = io(window.location.origin);
+
+        // Bind server -> client events
+        this.socket.on('room:created', ({ code, playerId, settings }) => {
+          this.roomCode = code;
+          this.playerId = playerId;
+          this.isHost = true;
+          this.settings = settings;
+          localStorage.setItem('ta_room_code', code);
+          localStorage.setItem('ta_player_id', playerId);
+          localStorage.setItem('ta_player_name', this.playerName);
+          
+          document.getElementById('waiting-room-code').textContent = code;
+          document.getElementById('host-settings-panel').style.display = '';
+          document.getElementById('guest-settings-panel').style.display = 'none';
+          document.getElementById('online-start-game-btn').style.display = '';
+          document.getElementById('online-start-warning').style.display = 'none';
+          this.updateHostSettingsUI();
+          showScreen('waiting-room-screen');
+        });
+
+        this.socket.on('room:joined', ({ code, playerId, settings }) => {
+          this.roomCode = code;
+          this.playerId = playerId;
+          this.isHost = false;
+          this.settings = settings;
+          localStorage.setItem('ta_room_code', code);
+          localStorage.setItem('ta_player_id', playerId);
+          localStorage.setItem('ta_player_name', this.playerName);
+          
+          document.getElementById('waiting-room-code').textContent = code;
+          document.getElementById('host-settings-panel').style.display = 'none';
+          document.getElementById('guest-settings-panel').style.display = '';
+          document.getElementById('online-start-game-btn').style.display = 'none';
+          document.getElementById('online-start-warning').style.display = '';
+          this.updateGuestSettingsUI();
+          showScreen('waiting-room-screen');
+        });
+
+        this.socket.on('room:rejoined', ({ code, playerId, state, settings, currentRound, totalRounds, scores }) => {
+          this.roomCode = code;
+          this.playerId = playerId;
+          this.settings = settings;
+          
+          // Re-populate client side shadow state
+          game.reset();
+          game.totalRounds = settings.totalRounds;
+          game.currentRound = currentRound;
+          game.gameMode = settings.gameMode;
+          // Reconstruct scores
+          game.scores = scores;
+
+          // Check if reconnecting host
+          const me = this.players.find(p => p.id === playerId);
+          this.isHost = me ? me.isHost : false;
+          
+          if (state === 'LOBBY') {
+            document.getElementById('waiting-room-code').textContent = code;
+            if (this.isHost) {
+              document.getElementById('host-settings-panel').style.display = '';
+              document.getElementById('guest-settings-panel').style.display = 'none';
+              document.getElementById('online-start-game-btn').style.display = '';
+            } else {
+              document.getElementById('host-settings-panel').style.display = 'none';
+              document.getElementById('guest-settings-panel').style.display = '';
+            }
+            showScreen('waiting-room-screen');
+          } else {
+            alert('Reconnected to active room!');
+            showScreen('waiting-room-screen');
+          }
+        });
+
+        this.socket.on('room:playerList', ({ players }) => {
+          this.players = players;
+          
+          // Check if my host status changed
+          const me = players.find(p => p.id === this.playerId);
+          if (me) {
+            this.isHost = me.isHost;
+          }
+
+          // Update host controls / guest view visibility
+          if (this.isHost) {
+            document.getElementById('host-settings-panel').style.display = '';
+            document.getElementById('guest-settings-panel').style.display = 'none';
+            document.getElementById('online-start-game-btn').style.display = '';
+            document.getElementById('online-start-warning').style.display = 'none';
+            
+            // Enable start if >= 2 players
+            const startBtn = document.getElementById('online-start-game-btn');
+            startBtn.disabled = players.length < 2;
+          } else {
+            document.getElementById('host-settings-panel').style.display = 'none';
+            document.getElementById('guest-settings-panel').style.display = '';
+            document.getElementById('online-start-game-btn').style.display = 'none';
+            document.getElementById('online-start-warning').style.display = '';
+            document.getElementById('online-start-warning').textContent = `Waiting for host to start game... Connected players: ${players.length}/12`;
+          }
+
+          document.getElementById('waiting-room-count').textContent = players.length;
+
+          // Render wait room list
+          const listContainer = document.getElementById('waiting-player-list');
+          listContainer.innerHTML = '';
+          players.forEach(p => {
+            const row = document.createElement('div');
+            row.className = 'player-row';
+            row.innerHTML = `
+              <div class="player-color" style="background:${p.color}"></div>
+              <div style="font-family:var(--font-heading); color:var(--border-subtle); flex:1; padding: 6px 10px; font-size:1.1rem;">
+                ${p.name} ${p.isHost ? '👑' : ''} ${!p.connected ? '(Disconnected)' : ''}
+              </div>
+            `;
+            listContainer.appendChild(row);
+          });
+        });
+
+        this.socket.on('room:youAreHost', () => {
+          this.isHost = true;
+          document.getElementById('host-settings-panel').style.display = '';
+          document.getElementById('guest-settings-panel').style.display = 'none';
+          document.getElementById('online-start-game-btn').style.display = '';
+          document.getElementById('online-start-warning').style.display = 'none';
+          this.updateHostSettingsUI();
+        });
+
+        this.socket.on('room:settingsUpdated', ({ settings }) => {
+          this.settings = settings;
+          if (!this.isHost) {
+            this.updateGuestSettingsUI();
+          }
+        });
+
+        this.socket.on('room:error', ({ message }) => {
+          alert(message);
+        });
+
+        this.socket.on('game:started', ({ settings }) => {
+          this.settings = settings;
+          audio.init();
+
+          // Reset local shadow game state
+          game.reset();
+          game.totalRounds = settings.totalRounds;
+          game.gameMode = settings.gameMode;
+          game.players = this.players.map(p => p.name);
+          // Set scores
+          this.players.forEach((p, idx) => {
+            game.scores[idx] = 0;
+          });
+        });
+
+        this.socket.on('round:new', (roundInfo) => {
+          game.currentRound = roundInfo.roundNum;
+          game.gameMode = roundInfo.gameMode;
+
+          if (roundInfo.targetTime) {
+            game.targetTime = roundInfo.targetTime;
+          }
+
+          document.getElementById('round-badge').textContent = `ROUND ${game.currentRound} OF ${game.totalRounds}`;
+          const targetDisplay = document.getElementById('countdown-target-display');
+          if (game.gameMode === 'blindguess') {
+            targetDisplay.style.display = 'none';
+          } else {
+            targetDisplay.style.display = '';
+            document.getElementById('countdown-target').innerHTML = `${(game.targetTime / 1000).toFixed(2)}<span class="target-unit">SEC</span>`;
+          }
+
+          showScreen('countdown-screen');
+        });
+
+        this.socket.on('countdown:tick', ({ value }) => {
+          const display = document.getElementById('countdown-display');
+          display.innerHTML = '';
+          if (typeof value === 'number') {
+            const num = document.createElement('div');
+            num.className = 'countdown-number';
+            num.textContent = value;
+            display.appendChild(num);
+            audio.countdownBeep();
+          } else {
+            const go = document.createElement('div');
+            go.className = 'countdown-go';
+            go.textContent = 'GO!';
+            display.appendChild(go);
+            audio.goBeep();
+          }
+        });
+
+        this.socket.on('round:play', () => {
+          if (game.gameMode === 'timeattack') {
+            this.startBuzzerScreen();
+          }
+        });
+
+        this.socket.on('buzzer:ack', ({ action }) => {
+          if (action === 'started') {
+            buzzerState = 'running';
+            buzzerBtn.className = 'buzzer-btn state-running';
+            buzzerBtn.innerHTML = 'TAP TO<br>STOP<span class="buzzer-sublabel">when you think time is up</span>';
+            buzzerInstruction.textContent = 'Counting in your head...';
+            audio.buzzerStart();
+          }
+        });
+
+        this.socket.on('buzzer:result', ({ elapsed }) => {
+          buzzerState = 'done';
+          buzzerBtn.className = 'buzzer-btn state-done';
+          buzzerBtn.innerHTML = '✓<br>DONE';
+          buzzerInstruction.textContent = 'Your time was recorded. Waiting for others...';
+          audio.buzzerStop();
+        });
+
+        this.socket.on('round:playerDone', ({ playerId, playerName, totalDone, totalPlayers }) => {
+          if (game.gameMode === 'timeattack') {
+            if (buzzerState === 'done') {
+              buzzerInstruction.textContent = `Recorded! Waiting for others (${totalDone}/${totalPlayers} done)...`;
+            }
+          } else if (game.gameMode === 'blindguess') {
+            const submitBtn = document.getElementById('blind-guess-submit-btn');
+            if (submitBtn.disabled) {
+              submitBtn.textContent = `RECORDED (${totalDone}/${totalPlayers})`;
+            }
+          }
+        });
+
+        this.socket.on('round:blindRunning', () => {
+          document.getElementById('blind-round-badge').textContent = `ROUND ${game.currentRound} OF ${game.totalRounds}`;
+          const content = document.getElementById('blind-timer-content');
+          content.innerHTML = `
+            <div class="blind-pulse-ring">
+              <div class="blind-pulse-icon">⏳</div>
+            </div>
+            <div class="blind-timer-heading">Timer Running…</div>
+            <div class="blind-timer-subtitle">The clock is counting in secret.<br>Focus and keep track in your head!</div>
+          `;
+          showScreen('blind-timer-screen');
+        });
+
+        this.socket.on('round:blindStopped', () => {
+          audio.blindStop();
+          
+          const content = document.getElementById('blind-timer-content');
+          content.innerHTML = `
+            <div class="blind-stopped-banner">STOPPED!</div>
+            <div class="blind-timer-subtitle">The timer has stopped. Submit your guess below!</div>
+          `;
+
+          setTimeout(() => {
+            this.startBlindGuessInput();
+          }, 1500);
+        });
+
+        this.socket.on('round:results', ({ roundNum, targetTime, gameMode, results, leaderboard, isGameComplete }) => {
+          game.currentRound = roundNum;
+          game.targetTime = targetTime;
+          game.gameMode = gameMode;
+
+          game.roundResults = results.map(r => ({
+            playerIndex: r.playerIndex,
+            playerName: r.playerName,
+            color: r.color,
+            elapsed: r.elapsed,
+            diff: r.diff,
+            points: r.points
+          }));
+
+          leaderboard.forEach(entry => {
+            const idx = this.players.findIndex(p => p.name === entry.name);
+            if (idx !== -1) game.scores[idx] = entry.totalScore;
+          });
+
+          game.finalizeRound();
+
+          const sorted = game.getRoundResultsSorted();
+          const targetSec = (targetTime / 1000).toFixed(2);
+          const isBlind = gameMode === 'blindguess';
+
+          document.getElementById('results-round-badge').textContent = `ROUND ${game.currentRound} OF ${game.totalRounds}`;
+          document.getElementById('results-target-label').textContent = isBlind ? 'Actual Elapsed' : 'Target Time';
+          document.getElementById('results-target-time').innerHTML = `${targetSec}<span class="target-unit">SEC</span>`;
+
+          renderProximityMeter(sorted, targetTime);
+          renderScoresTable(sorted, isBlind);
+          
+          const rows = document.getElementById('leaderboard-rows');
+          rows.innerHTML = '';
+          leaderboard.forEach((entry, i) => {
+            const row = document.createElement('div');
+            row.className = 'leaderboard-row' + (i === 0 ? ' top' : '');
+            row.innerHTML = `
+              <div class="lb-rank">${i === 0 ? '👑' : (i + 1)}</div>
+              <div class="lb-name" style="color: ${entry.color}">${entry.name}</div>
+              <div class="lb-total">${entry.totalScore} pts</div>
+            `;
+            rows.appendChild(row);
+          });
+
+          const nextBtn = document.getElementById('next-round-btn');
+          const endBtn = document.getElementById('end-game-btn');
+
+          if (this.isHost) {
+            nextBtn.style.display = '';
+            nextBtn.textContent = isGameComplete ? '🏆 SEE FINAL RESULTS' : 'NEXT ROUND →';
+            endBtn.style.display = '';
+          } else {
+            nextBtn.style.display = 'none';
+            endBtn.style.display = 'none';
+          }
+
+          showScreen('results-screen');
+          document.getElementById('results-screen').scrollTop = 0;
+        });
+
+        this.socket.on('game:final', ({ leaderboard, history }) => {
+          game.history = history;
+          
+          const winnerName = leaderboard[0] ? leaderboard[0].name : 'Unknown';
+          const winnerScore = leaderboard[0] ? leaderboard[0].totalScore : 0;
+
+          document.getElementById('winner-name').textContent = winnerName;
+          document.getElementById('winner-score').textContent = `${winnerScore} PTS`;
+
+          const rows = document.getElementById('final-standings-rows');
+          rows.innerHTML = '';
+
+          leaderboard.forEach((entry, i) => {
+            const row = document.createElement('div');
+            row.className = 'final-row';
+            if (i === 0) row.style.background = 'rgba(255, 195, 18, 0.08)';
+            row.innerHTML = `
+              <div class="final-rank">${RANK_ICONS[i] || (i + 1)}</div>
+              <div class="final-name" style="color: ${entry.color}">${entry.name}</div>
+              <div class="final-score">${entry.totalScore} pts</div>
+            `;
+            rows.appendChild(row);
+          });
+
+          const playAgainBtn = document.getElementById('play-again-btn');
+          const viewStatsBtn = document.getElementById('view-stats-btn');
+          
+          if (this.isHost) {
+            playAgainBtn.style.display = '';
+            playAgainBtn.textContent = '🔄 PLAY AGAIN';
+          } else {
+            playAgainBtn.style.display = 'none';
+          }
+
+          showScreen('final-screen');
+          launchConfetti();
+          audio.victory();
+        });
+
+        this.socket.on('game:returnToLobby', () => {
+          showScreen('waiting-room-screen');
+        });
+
+        this.socket.on('room:playerDisconnected', ({ playerName }) => {
+          console.log(`${playerName} disconnected`);
+        });
+      }
+
+      createRoom(playerName, settings) {
+        this.playerName = playerName;
+        this.socket.emit('room:create', { playerName, settings });
+      }
+
+      joinRoom(code, playerName) {
+        this.playerName = playerName;
+        this.socket.emit('room:join', { code, playerName });
+      }
+
+      updateSettings(settings) {
+        this.socket.emit('room:updateSettings', settings);
+      }
+
+      startGame() {
+        this.socket.emit('game:start');
+      }
+
+      startBuzzer() {
+        this.socket.emit('buzzer:start');
+      }
+
+      stopBuzzer() {
+        this.socket.emit('buzzer:stop');
+      }
+
+      submitBlindGuess(guess) {
+        this.socket.emit('blind:guess', { guess });
+      }
+
+      nextRound() {
+        this.socket.emit('game:nextRound');
+      }
+
+      playAgain() {
+        this.socket.emit('game:playAgain');
+      }
+
+      leaveRoom() {
+        if (this.socket) {
+          this.socket.disconnect();
+          this.socket = null;
+        }
+        this.roomCode = null;
+        this.playerId = null;
+        this.isHost = false;
+        localStorage.removeItem('ta_room_code');
+        localStorage.removeItem('ta_player_id');
+      }
+
+      updateHostSettingsUI() {
+        document.getElementById('online-game-mode-select').value = this.settings.gameMode;
+        document.getElementById('online-rounds-select').value = this.settings.totalRounds;
+        document.getElementById('online-time-mode-select').value = this.settings.timeMode;
+        document.getElementById('online-custom-time-input').value = this.settings.customTime;
+        document.getElementById('online-blind-min-input').value = this.settings.blindMin;
+        document.getElementById('online-blind-max-input').value = this.settings.blindMax;
+        
+        document.getElementById('online-time-mode-group').style.display = this.settings.gameMode === 'blindguess' ? 'none' : '';
+        document.getElementById('online-custom-time-group').style.display = (this.settings.gameMode !== 'blindguess' && this.settings.timeMode === 'custom') ? '' : 'none';
+        document.getElementById('online-blind-range-group').style.display = this.settings.gameMode === 'blindguess' ? '' : 'none';
+      }
+
+      updateGuestSettingsUI() {
+        const modeLabel = this.settings.gameMode === 'blindguess' ? '🙉 Blind Guess' : '⏱ Time Attack';
+        document.getElementById('guest-setting-mode').textContent = modeLabel;
+        document.getElementById('guest-setting-rounds').textContent = `${this.settings.totalRounds} Rounds`;
+        
+        const timeRow = document.getElementById('guest-setting-time-row');
+        if (this.settings.gameMode === 'blindguess') {
+          timeRow.innerHTML = `🎯 Target Window: <span style="color: var(--gold);">${this.settings.blindMin} - ${this.settings.blindMax}s</span>`;
+        } else {
+          const timeVal = this.settings.timeMode === 'custom' ? `${this.settings.customTime}s` : 'Random';
+          timeRow.innerHTML = `🎯 Target: <span style="color: var(--gold);">${timeVal}</span>`;
+        }
+      }
+
+      startBuzzerScreen() {
+        const me = this.players.find(p => p.id === this.playerId);
+        buzzerPlayerName.textContent = me ? me.name : 'You';
+        buzzerPlayerName.style.color = me ? me.color : 'var(--text-primary)';
+        buzzerTargetReminder.innerHTML = `🎯 TARGET: ${(game.targetTime / 1000).toFixed(2)}S`;
+        buzzerInstruction.textContent = 'Tap the button to start your timer';
+        buzzerBtn.className = 'buzzer-btn state-ready';
+        buzzerBtn.innerHTML = 'TAP TO<br>START<span class="buzzer-sublabel">then tap again to stop</span>';
+        buzzerState = 'ready';
+        showScreen('buzzer-screen');
+      }
+
+      startBlindGuessInput() {
+        const me = this.players.find(p => p.id === this.playerId);
+        document.getElementById('blind-guess-player-name').textContent = me ? me.name : 'You';
+        document.getElementById('blind-guess-player-name').style.color = me ? me.color : 'var(--text-primary)';
+        
+        const guessInput = document.getElementById('blind-guess-input');
+        guessInput.value = '';
+        guessInput.disabled = false;
+        
+        const submitBtn = document.getElementById('blind-guess-submit-btn');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'SUBMIT GUESS';
+        
+        showScreen('blind-guess-screen');
+        guessInput.focus();
+      }
+    }
+
+    const net = new NetworkClient();
+    let isOnlineMode = false;
+
     // ===== SCREEN MANAGEMENT =====
     function showScreen(screenId) {
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(screenId).classList.add('active');
     }
+
+    // ===== MODE SELECT SCREEN BINDINGS =====
+    document.getElementById('mode-local-btn').addEventListener('click', () => {
+      isOnlineMode = false;
+      showScreen('setup-screen');
+    });
+
+    document.getElementById('mode-online-btn').addEventListener('click', () => {
+      isOnlineMode = true;
+      net.init();
+      
+      // Prefill name if saved
+      const savedName = localStorage.getItem('ta_player_name') || '';
+      document.getElementById('online-name-input').value = savedName;
+      
+      const savedRoom = localStorage.getItem('ta_room_code') || '';
+      document.getElementById('room-code-input').value = savedRoom;
+
+      showScreen('online-lobby-screen');
+    });
+
+    document.getElementById('online-lobby-back-btn').addEventListener('click', () => {
+      showScreen('mode-select-screen');
+    });
+
+    document.getElementById('waiting-room-back-btn').addEventListener('click', () => {
+      net.leaveRoom();
+      showScreen('online-lobby-screen');
+    });
+
+    // Create room
+    document.getElementById('room-create-btn').addEventListener('click', () => {
+      const nameInput = document.getElementById('online-name-input');
+      const name = nameInput.value.trim();
+      if (!name) {
+        nameInput.style.borderColor = 'var(--red)';
+        setTimeout(() => { nameInput.style.borderColor = ''; }, 600);
+        return;
+      }
+      
+      // Default settings
+      const settings = {
+        gameMode: 'timeattack',
+        totalRounds: 3,
+        timeMode: 'random',
+        customTime: 4.0,
+        blindMin: 3,
+        blindMax: 15
+      };
+
+      net.createRoom(name, settings);
+    });
+
+    // Join room
+    document.getElementById('room-join-btn').addEventListener('click', () => {
+      const nameInput = document.getElementById('online-name-input');
+      const codeInput = document.getElementById('room-code-input');
+      
+      const name = nameInput.value.trim();
+      const code = codeInput.value.trim().toUpperCase();
+
+      let hasError = false;
+      if (!name) {
+        nameInput.style.borderColor = 'var(--red)';
+        setTimeout(() => { nameInput.style.borderColor = ''; }, 600);
+        hasError = true;
+      }
+      if (!code || code.length !== 4) {
+        codeInput.style.borderColor = 'var(--red)';
+        setTimeout(() => { codeInput.style.borderColor = ''; }, 600);
+        hasError = true;
+      }
+
+      if (hasError) return;
+      net.joinRoom(code, name);
+    });
+
+    // Host Settings listeners
+    const onlineGameModeSelect = document.getElementById('online-game-mode-select');
+    const onlineRoundsSelect = document.getElementById('online-rounds-select');
+    const onlineTimeModeSelect = document.getElementById('online-time-mode-select');
+    const onlineCustomTimeInput = document.getElementById('online-custom-time-input');
+    const onlineBlindMinInput = document.getElementById('online-blind-min-input');
+    const onlineBlindMaxInput = document.getElementById('online-blind-max-input');
+
+    function emitSettingsUpdate() {
+      if (!net.isHost) return;
+      net.updateSettings({
+        gameMode: onlineGameModeSelect.value,
+        totalRounds: parseInt(onlineRoundsSelect.value),
+        timeMode: onlineTimeModeSelect.value,
+        customTime: parseFloat(onlineCustomTimeInput.value) || 4.0,
+        blindMin: parseFloat(onlineBlindMinInput.value) || 3,
+        blindMax: parseFloat(onlineBlindMaxInput.value) || 15
+      });
+    }
+
+    onlineGameModeSelect.addEventListener('change', () => {
+      const isBlind = onlineGameModeSelect.value === 'blindguess';
+      document.getElementById('online-time-mode-group').style.display = isBlind ? 'none' : '';
+      document.getElementById('online-custom-time-group').style.display = (!isBlind && onlineTimeModeSelect.value === 'custom') ? '' : 'none';
+      document.getElementById('online-blind-range-group').style.display = isBlind ? '' : 'none';
+      emitSettingsUpdate();
+    });
+
+    onlineRoundsSelect.addEventListener('change', emitSettingsUpdate);
+    onlineTimeModeSelect.addEventListener('change', () => {
+      document.getElementById('online-custom-time-group').style.display = onlineTimeModeSelect.value === 'custom' ? '' : 'none';
+      emitSettingsUpdate();
+    });
+    onlineCustomTimeInput.addEventListener('input', emitSettingsUpdate);
+    onlineBlindMinInput.addEventListener('input', emitSettingsUpdate);
+    onlineBlindMaxInput.addEventListener('input', emitSettingsUpdate);
+
+    // Host Start Game
+    document.getElementById('online-start-game-btn').addEventListener('click', () => {
+      net.startGame();
+    });
 
     // ===== SETUP SCREEN =====
     const playerListEl = document.getElementById('player-list');
@@ -1127,7 +1881,7 @@ body::after {
     let playerCount = 0;
 
     function addPlayerRow(defaultName = '') {
-      if (playerCount >= 8) return;
+      if (playerCount >= 12) return;
       const idx = playerCount;
       playerCount++;
 
@@ -1159,7 +1913,7 @@ body::after {
 
       row.append(color, input, removeBtn);
       playerListEl.appendChild(row);
-      if (playerCount >= 8) addPlayerBtn.style.display = 'none';
+      if (playerCount >= 12) addPlayerBtn.style.display = 'none';
       updateStartButton();
     }
 
@@ -1172,7 +1926,7 @@ body::after {
         if (!input.value) input.placeholder = `Player ${i + 1}`;
         input.id = `player-input-${i}`;
       });
-      if (playerCount < 8) addPlayerBtn.style.display = '';
+      if (playerCount < 12) addPlayerBtn.style.display = '';
       updateStartButton();
     }
 
@@ -1349,6 +2103,16 @@ body::after {
         return;
       }
 
+      if (isOnlineMode) {
+        net.submitBlindGuess(guessVal);
+        audio.buzzerStop();
+        guessInput.disabled = true;
+        const submitBtn = document.getElementById('blind-guess-submit-btn');
+        submitBtn.disabled = true;
+        submitBtn.textContent = '✓ RECORDED';
+        return;
+      }
+
       const guessMs = guessVal * 1000;
       game.recordResult(game.currentPlayerIndex, guessMs);
       audio.buzzerStop();
@@ -1397,6 +2161,15 @@ body::after {
     }
 
     buzzerBtn.addEventListener('click', () => {
+      if (isOnlineMode) {
+        if (buzzerState === 'ready') {
+          net.startBuzzer();
+        } else if (buzzerState === 'running') {
+          net.stopBuzzer();
+        }
+        return;
+      }
+
       if (buzzerState === 'ready') {
         buzzerState = 'running';
         buzzerStartTime = Date.now();
@@ -1548,11 +2321,21 @@ body::after {
     // ===== NEXT ROUND / END GAME =====
     document.getElementById('next-round-btn').addEventListener('click', () => {
       audio.init();
+      if (isOnlineMode) {
+        net.nextRound();
+        return;
+      }
       if (game.isGameComplete()) showFinalResults();
       else startNewRound();
     });
 
-    document.getElementById('end-game-btn').addEventListener('click', () => showFinalResults());
+    document.getElementById('end-game-btn').addEventListener('click', () => {
+      if (isOnlineMode) {
+        net.socket.emit('game:endEarly');
+        return;
+      }
+      showFinalResults();
+    });
 
     // ===== FINAL RESULTS =====
     function showFinalResults() {
@@ -1589,7 +2372,13 @@ body::after {
     });
 
     document.getElementById('stats-back-btn').addEventListener('click', () => showScreen('final-screen'));
-    document.getElementById('stats-play-again-btn').addEventListener('click', () => showScreen('setup-screen'));
+    document.getElementById('stats-play-again-btn').addEventListener('click', () => {
+      if (isOnlineMode) {
+        net.playAgain();
+        return;
+      }
+      showScreen('setup-screen');
+    });
 
     function renderStatistics() {
       drawAccuracyChart();
@@ -1966,7 +2755,13 @@ body::after {
     }
 
     // ===== PLAY AGAIN =====
-    document.getElementById('play-again-btn').addEventListener('click', () => showScreen('setup-screen'));
+    document.getElementById('play-again-btn').addEventListener('click', () => {
+      if (isOnlineMode) {
+        net.playAgain();
+        return;
+      }
+      showScreen('setup-screen');
+    });
 
     // ===== PREVENT DOUBLE-TAP ZOOM ON MOBILE =====
     document.addEventListener('touchend', (e) => {
