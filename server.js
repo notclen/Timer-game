@@ -10,12 +10,12 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
-// Serve the client from public/
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static files from the root directory (where index.html is)
+app.use(express.static(__dirname));
 
 // Fallback to serve index.html for root access
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 const rooms = new Map(); // code → Room
