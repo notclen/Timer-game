@@ -47,8 +47,11 @@ class Room {
     this.relayTurnOrder = { A: [], B: [] };
     this.relayCurrentTurnIndex = { A: 0, B: 0 };
     this.relayRoundHistory = { A: [], B: [] };
-    this.relayTeamsDone = { A: false, B: false };
     this.relayRevealTimeouts = [];
+    this.relayTurnNumber = 1;
+    this.relayTurnTarget = 3;
+    this.relayRunningTargetSum = 3;
+    this.relayGuessesThisTurn = { A: null, B: null };
   }
 
   // ===== PLAYER MANAGEMENT =====
@@ -506,7 +509,10 @@ class Room {
     this.players.forEach(p => { this.scores[p.id] = 0; });
     this.relayTeamTallies = { A: 0, B: 0 };
     this.relayRoundHistory = { A: [], B: [] };
-    this.relayTeamsDone = { A: false, B: false };
+    this.relayTurnNumber = 1;
+    this.relayTurnTarget = 3;
+    this.relayRunningTargetSum = 3;
+    this.relayGuessesThisTurn = { A: null, B: null };
     this.clearTimeouts();
     this.broadcast('game:returnToLobby', {});
     this.broadcastPlayerList();
@@ -518,8 +524,11 @@ class Room {
     this.state = 'RELAY_PLAYING';
     this.relayTeamTallies = { A: 0, B: 0 };
     this.relayRoundHistory = { A: [], B: [] };
-    this.relayTeamsDone = { A: false, B: false };
     this.relayCurrentTurnIndex = { A: 0, B: 0 };
+    this.relayTurnNumber = 1;
+    this.relayTurnTarget = 3;
+    this.relayRunningTargetSum = 3;
+    this.relayGuessesThisTurn = { A: null, B: null };
 
     this.relayTurnOrder = {
       A: this.getTeamPlayers('A').filter(p => p.connected).map(p => p.id),
@@ -538,8 +547,7 @@ class Room {
           const p = this.players.find(pl => pl.id === id);
           return { id, name: p.name, color: p.color };
         })
-      },
-      tallies: this.relayTeamTallies
+      }
     });
 
     this.sendRelayTurn('A');
@@ -547,8 +555,6 @@ class Room {
   }
 
   sendRelayTurn(team) {
-    if (this.relayTeamsDone[team]) return;
-
     const turnOrder = this.relayTurnOrder[team];
     const currentIdx = this.relayCurrentTurnIndex[team];
 
@@ -562,25 +568,18 @@ class Room {
 
     if (!player) return;
 
-    const targetMs = this.settings.relayTarget * 1000;
-    const remaining = (targetMs - this.relayTeamTallies[team]) / 1000;
-
     this.io.to(player.socketId).emit('relay:yourTurn', {
       team,
-      currentTally: this.relayTeamTallies[team] / 1000,
-      targetTime: this.settings.relayTarget,
-      remaining: Math.max(0, remaining),
-      turnNumber: this.relayRoundHistory[team].length + 1
+      turnTarget: this.relayTurnTarget,
+      turnNumber: this.relayTurnNumber
     });
 
     this.broadcast('relay:turnUpdate', {
       team,
       currentPlayerId: playerId,
       currentPlayerName: player.name,
-      currentTally: this.relayTeamTallies[team] / 1000,
-      targetTime: this.settings.relayTarget,
-      remaining: Math.max(0, remaining),
-      turnNumber: this.relayRoundHistory[team].length + 1
+      turnTarget: this.relayTurnTarget,
+      turnNumber: this.relayTurnNumber
     });
   }
 
@@ -588,105 +587,101 @@ class Room {
     if (this.state !== 'RELAY_PLAYING') return;
 
     const team = this.teams[playerId];
-    if (!team || this.relayTeamsDone[team]) return;
+    if (!team) return;
 
-    const turnOrder = this.relayTurnOrder[team];
-    const currentIdx = this.relayCurrentTurnIndex[team];
-    if (turnOrder[currentIdx] !== playerId) return;
-
-    const guessMs = guessSeconds * 1000;
-    this.relayTeamTallies[team] += guessMs;
+    // Check if already guessed this turn
+    if (this.relayGuessesThisTurn[team] !== null) return;
 
     const player = this.players.find(p => p.id === playerId);
-    const targetMs = this.settings.relayTarget * 1000;
+    if (!player) return;
 
-    this.relayRoundHistory[team].push({
+    this.relayGuessesThisTurn[team] = {
       playerId,
-      playerName: player ? player.name : '?',
-      playerColor: player ? player.color : '#888',
+      playerName: player.name,
+      playerColor: player.color,
       guess: guessSeconds,
-      runningTotal: this.relayTeamTallies[team] / 1000,
-      targetTime: this.settings.relayTarget
+      target: this.relayTurnTarget
+    };
+
+    // Acknowledge the guess
+    this.io.to(player.socketId).emit('relay:guessConfirmed', {
+      guess: guessSeconds
     });
 
+    // Notify everyone someone on the team completed their turn
     this.broadcast('relay:guessDone', {
       team,
-      playerName: player ? player.name : '?',
-      turnNumber: this.relayRoundHistory[team].length,
-      teamsDone: { A: this.relayTeamsDone.A, B: this.relayTeamsDone.B }
+      playerName: player.name,
+      turnNumber: this.relayTurnNumber
     });
 
-    if (player) {
-      this.io.to(player.socketId).emit('relay:guessConfirmed', {
-        guess: guessSeconds
-      });
-    }
+    // If both teams have guessed for this round, compile and advance
+    if (this.relayGuessesThisTurn.A !== null && this.relayGuessesThisTurn.B !== null) {
+      const guessA = this.relayGuessesThisTurn.A;
+      const guessB = this.relayGuessesThisTurn.B;
 
-    if (this.relayTeamTallies[team] >= targetMs) {
-      this.relayTeamsDone[team] = true;
-      this.broadcast('relay:teamDone', {
-        team,
-        totalTurns: this.relayRoundHistory[team].length
-      });
-    } else {
-      this.relayCurrentTurnIndex[team] = (currentIdx + 1) % turnOrder.length;
-      this.countdownTimeouts.push(setTimeout(() => {
-        this.sendRelayTurn(team);
-      }, 500));
-    }
+      this.relayRoundHistory.A.push(guessA);
+      this.relayRoundHistory.B.push(guessB);
 
-    if (this.relayTeamsDone.A && this.relayTeamsDone.B) {
-      this.countdownTimeouts.push(setTimeout(() => {
-        this.startRelayReveal();
-      }, 1500));
+      this.relayTeamTallies.A += guessA.guess;
+      this.relayTeamTallies.B += guessB.guess;
+
+      if (this.relayRunningTargetSum >= this.settings.relayTarget) {
+        // Relay complete! Start reveal phase after a short delay
+        this.countdownTimeouts.push(setTimeout(() => {
+          this.startRelayReveal();
+        }, 1500));
+      } else {
+        // Setup next turn
+        this.relayGuessesThisTurn = { A: null, B: null };
+        this.relayTurnNumber++;
+        this.relayTurnTarget = 3 * this.relayTurnNumber;
+        this.relayRunningTargetSum += this.relayTurnTarget;
+
+        this.relayCurrentTurnIndex.A = (this.relayCurrentTurnIndex.A + 1) % this.relayTurnOrder.A.length;
+        this.relayCurrentTurnIndex.B = (this.relayCurrentTurnIndex.B + 1) % this.relayTurnOrder.B.length;
+
+        this.countdownTimeouts.push(setTimeout(() => {
+          this.sendRelayTurn('A');
+          this.sendRelayTurn('B');
+        }, 1000));
+      }
     }
   }
 
   startRelayReveal() {
     this.state = 'RELAY_REVEAL';
-    const maxRounds = Math.max(
-      this.relayRoundHistory.A.length,
-      this.relayRoundHistory.B.length
-    );
+    const maxRounds = this.relayRoundHistory.A.length;
 
     this.broadcast('relay:revealStart', {
       targetTime: this.settings.relayTarget,
-      totalRoundsA: this.relayRoundHistory.A.length,
-      totalRoundsB: this.relayRoundHistory.B.length
+      totalRounds: maxRounds
     });
 
     let delay = 2000;
     for (let i = 0; i < maxRounds; i++) {
       const roundIdx = i;
       this.relayRevealTimeouts.push(setTimeout(() => {
+        const a = this.relayRoundHistory.A[roundIdx];
+        const b = this.relayRoundHistory.B[roundIdx];
+
         const revealData = {
           roundNumber: roundIdx + 1,
-          totalRounds: maxRounds
+          totalRounds: maxRounds,
+          turnTarget: a.target,
+          teamA: {
+            playerName: a.playerName,
+            playerColor: a.playerColor,
+            guess: a.guess,
+            diff: Math.abs(a.guess - a.target)
+          },
+          teamB: {
+            playerName: b.playerName,
+            playerColor: b.playerColor,
+            guess: b.guess,
+            diff: Math.abs(b.guess - b.target)
+          }
         };
-
-        if (roundIdx < this.relayRoundHistory.A.length) {
-          const entry = this.relayRoundHistory.A[roundIdx];
-          revealData.teamA = {
-            playerName: entry.playerName,
-            playerColor: entry.playerColor,
-            guess: entry.guess,
-            runningTotal: entry.runningTotal,
-            targetTime: this.settings.relayTarget,
-            diff: Math.abs(entry.runningTotal - this.settings.relayTarget)
-          };
-        }
-
-        if (roundIdx < this.relayRoundHistory.B.length) {
-          const entry = this.relayRoundHistory.B[roundIdx];
-          revealData.teamB = {
-            playerName: entry.playerName,
-            playerColor: entry.playerColor,
-            guess: entry.guess,
-            runningTotal: entry.runningTotal,
-            targetTime: this.settings.relayTarget,
-            diff: Math.abs(entry.runningTotal - this.settings.relayTarget)
-          };
-        }
 
         this.broadcast('relay:revealRound', revealData);
       }, delay));
@@ -695,10 +690,11 @@ class Room {
     }
 
     this.relayRevealTimeouts.push(setTimeout(() => {
-      const finalTallyA = this.relayTeamTallies.A / 1000;
-      const finalTallyB = this.relayTeamTallies.B / 1000;
-      const diffA = Math.abs(finalTallyA - this.settings.relayTarget);
-      const diffB = Math.abs(finalTallyB - this.settings.relayTarget);
+      const finalTallyA = this.relayTeamTallies.A;
+      const finalTallyB = this.relayTeamTallies.B;
+      const totalTarget = this.relayRunningTargetSum;
+      const diffA = Math.abs(finalTallyA - totalTarget);
+      const diffB = Math.abs(finalTallyB - totalTarget);
 
       let winner = null;
       if (diffA < diffB) winner = 'A';
@@ -707,7 +703,7 @@ class Room {
       this.state = 'GAME_OVER';
 
       this.broadcast('relay:finalReveal', {
-        targetTime: this.settings.relayTarget,
+        targetTime: totalTarget,
         teamA: {
           finalTally: finalTallyA,
           diff: diffA,
