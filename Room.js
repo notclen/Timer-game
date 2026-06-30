@@ -651,72 +651,102 @@ class Room {
 
   startRelayReveal() {
     this.state = 'RELAY_REVEAL';
+    this.relayRevealIndex = 0;
     const maxRounds = this.relayRoundHistory.A.length;
 
     this.broadcast('relay:revealStart', {
       targetTime: this.settings.relayTarget,
       totalRounds: maxRounds
     });
+  }
 
-    let delay = 2000;
-    for (let i = 0; i < maxRounds; i++) {
-      const roundIdx = i;
-      this.relayRevealTimeouts.push(setTimeout(() => {
-        const a = this.relayRoundHistory.A[roundIdx];
-        const b = this.relayRoundHistory.B[roundIdx];
+  revealNextRound() {
+    if (this.state !== 'RELAY_REVEAL') return;
+    const maxRounds = this.relayRoundHistory.A.length;
+    const roundIdx = this.relayRevealIndex;
 
-        const revealData = {
-          roundNumber: roundIdx + 1,
-          totalRounds: maxRounds,
-          turnTarget: a.target,
-          teamA: {
-            playerName: a.playerName,
-            playerColor: a.playerColor,
-            guess: a.guess,
-            diff: Math.abs(a.guess - a.target)
-          },
-          teamB: {
-            playerName: b.playerName,
-            playerColor: b.playerColor,
-            guess: b.guess,
-            diff: Math.abs(b.guess - b.target)
-          }
-        };
+    if (roundIdx < maxRounds) {
+      const a = this.relayRoundHistory.A[roundIdx];
+      const b = this.relayRoundHistory.B[roundIdx];
 
-        this.broadcast('relay:revealRound', revealData);
-      }, delay));
-
-      delay += 2500;
-    }
-
-    this.relayRevealTimeouts.push(setTimeout(() => {
-      const finalTallyA = this.relayTeamTallies.A;
-      const finalTallyB = this.relayTeamTallies.B;
-      const totalTarget = this.relayRunningTargetSum;
-      const diffA = Math.abs(finalTallyA - totalTarget);
-      const diffB = Math.abs(finalTallyB - totalTarget);
-
-      let winner = null;
-      if (diffA < diffB) winner = 'A';
-      else if (diffB < diffA) winner = 'B';
-
-      this.state = 'GAME_OVER';
-
-      this.broadcast('relay:finalReveal', {
-        targetTime: totalTarget,
+      const revealData = {
+        roundNumber: roundIdx + 1,
+        totalRounds: maxRounds,
+        turnTarget: a.target,
         teamA: {
-          finalTally: finalTallyA,
-          diff: diffA,
-          history: this.relayRoundHistory.A
+          playerName: a.playerName,
+          playerColor: a.playerColor,
+          guess: a.guess,
+          diff: Math.abs(a.guess - a.target)
         },
         teamB: {
-          finalTally: finalTallyB,
-          diff: diffB,
-          history: this.relayRoundHistory.B
-        },
-        winner
-      });
-    }, delay + 1000));
+          playerName: b.playerName,
+          playerColor: b.playerColor,
+          guess: b.guess,
+          diff: Math.abs(b.guess - b.target)
+        }
+      };
+
+      this.broadcast('relay:revealRound', revealData);
+      this.relayRevealIndex++;
+
+      // Automatically trigger final results on next click after last round is revealed
+      if (this.relayRevealIndex === maxRounds) {
+        this.broadcast('relay:revealReadyForFinal', {});
+      }
+    } else {
+      this.revealFinalResults();
+    }
+  }
+
+  revealAutoRounds() {
+    if (this.state !== 'RELAY_REVEAL') return;
+    const maxRounds = this.relayRoundHistory.A.length;
+
+    const autoTick = () => {
+      if (this.state !== 'RELAY_REVEAL') return;
+      if (this.relayRevealIndex < maxRounds) {
+        this.revealNextRound();
+        this.relayRevealTimeouts.push(setTimeout(autoTick, 2500));
+      } else {
+        this.relayRevealTimeouts.push(setTimeout(() => {
+          this.revealFinalResults();
+        }, 1500));
+      }
+    };
+
+    autoTick();
+  }
+
+  revealFinalResults() {
+    if (this.state !== 'RELAY_REVEAL') return;
+
+    const finalTallyA = this.relayTeamTallies.A;
+    const finalTallyB = this.relayTeamTallies.B;
+    const totalTarget = this.relayRunningTargetSum;
+    const diffA = Math.abs(finalTallyA - totalTarget);
+    const diffB = Math.abs(finalTallyB - totalTarget);
+
+    let winner = null;
+    if (diffA < diffB) winner = 'A';
+    else if (diffB < diffA) winner = 'B';
+
+    this.state = 'GAME_OVER';
+
+    this.broadcast('relay:finalReveal', {
+      targetTime: totalTarget,
+      teamA: {
+        finalTally: finalTallyA,
+        diff: diffA,
+        history: this.relayRoundHistory.A
+      },
+      teamB: {
+        finalTally: finalTallyB,
+        diff: diffB,
+        history: this.relayRoundHistory.B
+      },
+      winner
+    });
   }
 
   clearTimeouts() {
