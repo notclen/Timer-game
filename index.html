@@ -926,6 +926,12 @@ body::after {
             </div>
           </div>
 
+          <!-- Relay Target Time -->
+          <div id="online-relay-target-group" class="setting-group" style="display:none; margin-top: 12px;">
+            <label class="label" for="online-relay-target-input">Team Target Total (seconds)</label>
+            <input id="online-relay-target-input" class="input-field" type="number" min="10" max="120" step="1" value="30">
+          </div>
+
           <!-- Relay Rounds per Player -->
           <div id="online-relay-rounds-group" class="setting-group" style="display:none; margin-top: 12px;">
             <label class="label" for="online-relay-rounds-select">Rounds per Player</label>
@@ -2565,67 +2571,71 @@ body::after {
     const onlineCustomTimeInput = document.getElementById('online-custom-time-input');
     const onlineBlindMinInput = document.getElementById('online-blind-min-input');
     const onlineBlindMaxInput = document.getElementById('online-blind-max-input');
-     const onlineTeamModeToggle = document.getElementById('online-team-mode-toggle');
-     const onlineTeamScoringSelect = document.getElementById('online-team-scoring-select');
-     const onlineRelayRoundsSelect = document.getElementById('online-relay-rounds-select');
- 
-     function emitSettingsUpdate() {
-       if (!net.isHost) return;
-       net.updateSettings({
-         gameMode: onlineGameModeSelect.value,
-         totalRounds: parseInt(onlineRoundsSelect.value),
-         timeMode: onlineTimeModeSelect.value,
-         customTime: parseFloat(onlineCustomTimeInput.value) || 4.0,
-         blindMin: parseFloat(onlineBlindMinInput.value) || 3,
-         blindMax: parseFloat(onlineBlindMaxInput.value) || 15,
-         teamMode: onlineTeamModeToggle.checked,
-         teamScoringRule: onlineTeamScoringSelect.value,
-         relayRoundsPerPlayer: parseInt(onlineRelayRoundsSelect.value)
-       });
-     }
- 
-     function updateHostModeVisibility() {
-       const mode = onlineGameModeSelect.value;
-       const isBlind = mode === 'blindguess';
-       const isRelay = mode === 'relaycountdown';
-       const isTeam = onlineTeamModeToggle.checked;
- 
-       // Show/hide mode-specific settings
-       document.getElementById('online-time-mode-group').style.display = (isBlind || isRelay) ? 'none' : '';
-       document.getElementById('online-custom-time-group').style.display = (!isBlind && !isRelay && onlineTimeModeSelect.value === 'custom') ? '' : 'none';
-       document.getElementById('online-blind-range-group').style.display = isBlind ? '' : 'none';
-       document.getElementById('online-relay-rounds-group').style.display = isRelay ? '' : 'none';
- 
-       // Rounds: hide for relay
-       document.getElementById('online-rounds-select').closest('.setting-group').style.display = isRelay ? 'none' : '';
- 
-       // Team mode: force on for relay
-       if (isRelay) {
-         onlineTeamModeToggle.checked = true;
-         onlineTeamModeToggle.disabled = true;
-       } else {
-         onlineTeamModeToggle.disabled = false;
-       }
- 
-       const teamEnabled = onlineTeamModeToggle.checked;
-       document.getElementById('online-team-scoring-group').style.display = (teamEnabled && !isRelay) ? '' : 'none';
-       document.getElementById('online-team-assignment').style.display = teamEnabled ? '' : 'none';
-     }
- 
-     onlineGameModeSelect.addEventListener('change', () => {
-       updateHostModeVisibility();
-       emitSettingsUpdate();
-     });
- 
-     onlineRoundsSelect.addEventListener('change', emitSettingsUpdate);
-     onlineTimeModeSelect.addEventListener('change', () => {
-       document.getElementById('online-custom-time-group').style.display = onlineTimeModeSelect.value === 'custom' ? '' : 'none';
-       emitSettingsUpdate();
-     });
-     onlineCustomTimeInput.addEventListener('input', emitSettingsUpdate);
-     onlineBlindMinInput.addEventListener('input', emitSettingsUpdate);
-     onlineBlindMaxInput.addEventListener('input', emitSettingsUpdate);
-     onlineRelayRoundsSelect.addEventListener('change', emitSettingsUpdate);
+    const onlineTeamModeToggle = document.getElementById('online-team-mode-toggle');
+    const onlineTeamScoringSelect = document.getElementById('online-team-scoring-select');
+    const onlineRelayTargetInput = document.getElementById('online-relay-target-input');
+    const onlineRelayRoundsSelect = document.getElementById('online-relay-rounds-select');
+
+    function emitSettingsUpdate() {
+      if (!net.isHost) return;
+      net.updateSettings({
+        gameMode: onlineGameModeSelect.value,
+        totalRounds: parseInt(onlineRoundsSelect.value),
+        timeMode: onlineTimeModeSelect.value,
+        customTime: parseFloat(onlineCustomTimeInput.value) || 4.0,
+        blindMin: parseFloat(onlineBlindMinInput.value) || 3,
+        blindMax: parseFloat(onlineBlindMaxInput.value) || 15,
+        teamMode: onlineTeamModeToggle.checked,
+        teamScoringRule: onlineTeamScoringSelect.value,
+        relayTarget: parseFloat(onlineRelayTargetInput.value) || 30,
+        relayRoundsPerPlayer: parseInt(onlineRelayRoundsSelect.value)
+      });
+    }
+
+    function updateHostModeVisibility() {
+      const mode = onlineGameModeSelect.value;
+      const isBlind = mode === 'blindguess';
+      const isRelay = mode === 'relaycountdown';
+      const isTeam = onlineTeamModeToggle.checked;
+
+      // Show/hide mode-specific settings
+      document.getElementById('online-time-mode-group').style.display = (isBlind || isRelay) ? 'none' : '';
+      document.getElementById('online-custom-time-group').style.display = (!isBlind && !isRelay && onlineTimeModeSelect.value === 'custom') ? '' : 'none';
+      document.getElementById('online-blind-range-group').style.display = isBlind ? '' : 'none';
+      document.getElementById('online-relay-target-group').style.display = isRelay ? '' : 'none';
+      document.getElementById('online-relay-rounds-group').style.display = isRelay ? '' : 'none';
+
+      // Rounds: hide for relay
+      document.getElementById('online-rounds-select').closest('.setting-group').style.display = isRelay ? 'none' : '';
+
+      // Team mode: force on for relay
+      if (isRelay) {
+        onlineTeamModeToggle.checked = true;
+        onlineTeamModeToggle.disabled = true;
+      } else {
+        onlineTeamModeToggle.disabled = false;
+      }
+
+      const teamEnabled = onlineTeamModeToggle.checked;
+      document.getElementById('online-team-scoring-group').style.display = (teamEnabled && !isRelay) ? '' : 'none';
+      document.getElementById('online-team-assignment').style.display = teamEnabled ? '' : 'none';
+    }
+
+    onlineGameModeSelect.addEventListener('change', () => {
+      updateHostModeVisibility();
+      emitSettingsUpdate();
+    });
+
+    onlineRoundsSelect.addEventListener('change', emitSettingsUpdate);
+    onlineTimeModeSelect.addEventListener('change', () => {
+      document.getElementById('online-custom-time-group').style.display = onlineTimeModeSelect.value === 'custom' ? '' : 'none';
+      emitSettingsUpdate();
+    });
+    onlineCustomTimeInput.addEventListener('input', emitSettingsUpdate);
+    onlineBlindMinInput.addEventListener('input', emitSettingsUpdate);
+    onlineBlindMaxInput.addEventListener('input', emitSettingsUpdate);
+    onlineRelayTargetInput.addEventListener('input', emitSettingsUpdate);
+    onlineRelayRoundsSelect.addEventListener('change', emitSettingsUpdate);
  
      onlineTeamModeToggle.addEventListener('change', () => {
        updateHostModeVisibility();
