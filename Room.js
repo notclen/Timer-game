@@ -84,6 +84,12 @@ class Room {
       this.destroyTimeout = null;
     }
 
+    if (this.settings.teamMode) {
+      const aCount = this.getTeamPlayers('A').length;
+      const bCount = this.getTeamPlayers('B').length;
+      this.teams[player.id] = aCount <= bCount ? 'A' : 'B';
+    }
+
     this.broadcastPlayerList();
     return player;
   }
@@ -187,6 +193,23 @@ class Room {
     if (this.settings.blindMin > this.settings.blindMax) {
       [this.settings.blindMin, this.settings.blindMax] = [this.settings.blindMax, this.settings.blindMin];
     }
+    
+    // Auto-assign teams to unassigned players when team mode is enabled
+    if (this.settings.teamMode) {
+      let updated = false;
+      this.players.forEach(p => {
+        if (!this.teams[p.id]) {
+          const aCount = this.getTeamPlayers('A').length;
+          const bCount = this.getTeamPlayers('B').length;
+          this.teams[p.id] = aCount <= bCount ? 'A' : 'B';
+          updated = true;
+        }
+      });
+      if (updated) {
+        this.broadcastPlayerList();
+      }
+    }
+
     this.broadcast('room:settingsUpdated', { settings: this.settings });
   }
 
