@@ -183,6 +183,7 @@ class Room {
     if (settings.blindMax != null) this.settings.blindMax = parseFloat(settings.blindMax);
     if (settings.teamMode != null) this.settings.teamMode = !!settings.teamMode;
     if (settings.teamScoringRule) this.settings.teamScoringRule = settings.teamScoringRule;
+    if (settings.relayTarget != null) this.settings.relayTarget = parseFloat(settings.relayTarget) || 30;
     if (settings.relayRoundsPerPlayer != null) this.settings.relayRoundsPerPlayer = parseInt(settings.relayRoundsPerPlayer) || 2;
 
     // Relay countdown requires team mode
@@ -560,17 +561,47 @@ class Room {
     const roundsPerPlayer = this.settings.relayRoundsPerPlayer || 2;
     this.relayTotalRounds = Math.max(2, playersPerTeam * roundsPerPlayer);
 
-    // Pre-generate random targets for each round
+    const S = this.settings.relayTarget || 30;
+    const N = this.relayTotalRounds;
+
+    // Minimum target duration for each round.
+    // If S is small relative to N, scale M down dynamically so partition is mathematically possible.
+    const M = Math.min(3.0, S / (N + 1));
+    const R = S - N * M;
+
     this.relayRoundTargets = [];
-    let sum = 0;
-    for (let i = 0; i < this.relayTotalRounds; i++) {
-      // Random target between 3.0s and 12.0s with 1 decimal place
-      const rTarget = (Math.floor(Math.random() * 91) + 30) / 10;
-      this.relayRoundTargets.push(rTarget);
-      sum += rTarget;
+    if (R > 0) {
+      // Generate N-1 random cuts in the range [0, R]
+      const cuts = [];
+      for (let i = 0; i < N - 1; i++) {
+        cuts.push(Math.random() * R);
+      }
+      cuts.sort((a, b) => a - b);
+
+      let lastCut = 0;
+      for (let i = 0; i < N - 1; i++) {
+        const seg = cuts[i] - lastCut;
+        this.relayRoundTargets.push(parseFloat((M + seg).toFixed(1)));
+        lastCut = cuts[i];
+      }
+      const lastSeg = R - lastCut;
+      this.relayRoundTargets.push(parseFloat((M + lastSeg).toFixed(1)));
+    } else {
+      // fallback if S is too small: partition equally
+      const equalTime = S / N;
+      for (let i = 0; i < N; i++) {
+        this.relayRoundTargets.push(parseFloat(equalTime.toFixed(1)));
+      }
     }
-    this.settings.relayTarget = sum;
-    this.relayRunningTargetSum = sum;
+
+    // Ensure the sum adds up EXACTLY to S after decimal rounding
+    let currentSum = this.relayRoundTargets.reduce((a, b) => a + b, 0);
+    const diff = S - currentSum;
+    if (Math.abs(diff) > 0.01) {
+      this.relayRoundTargets[this.relayRoundTargets.length - 1] = parseFloat((this.relayRoundTargets[this.relayRoundTargets.length - 1] + diff).toFixed(1));
+    }
+
+    this.relayRunningTargetSum = S;
 
     this.relayTurnNumber = 1;
     this.relayTurnTarget = this.relayRoundTargets[0];
