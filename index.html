@@ -1647,6 +1647,11 @@ body::after {
 
         this.socket.on('connect', () => {
           console.log('[Socket] Connected successfully');
+          const code = localStorage.getItem('ta_room_code');
+          const playerId = localStorage.getItem('ta_player_id');
+          if (code && playerId) {
+            this.socket.emit('room:reconnect', { code, playerId });
+          }
         });
 
         this.socket.on('connect_error', (error) => {
@@ -2094,6 +2099,12 @@ body::after {
           btn.className = 'buzzer-btn state-ready';
           btn.innerHTML = 'TAP TO<br>START<span class="buzzer-sublabel">then tap again to stop</span>';
           relayBuzzerState = 'ready';
+
+          relayCurrentTurnTarget = turnTarget;
+          startAutoStartTimer(() => {
+            document.getElementById('relay-buzzer-btn').click();
+          });
+
           audio.buzzerStart();
         });
 
@@ -2428,6 +2439,11 @@ body::after {
         buzzerBtn.className = 'buzzer-btn state-ready';
         buzzerBtn.innerHTML = 'TAP TO<br>START<span class="buzzer-sublabel">then tap again to stop</span>';
         buzzerState = 'ready';
+
+        startAutoStartTimer(() => {
+          net.startBuzzer();
+        });
+
         showScreen('buzzer-screen');
       }
 
@@ -2456,6 +2472,7 @@ body::after {
 
     // ===== SCREEN MANAGEMENT =====
     function showScreen(screenId) {
+      clearAutoStartTimer();
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
       document.getElementById(screenId).classList.add('active');
     }
@@ -2925,6 +2942,49 @@ body::after {
 
     let relayBuzzerState = 'ready';
     let relayBuzzerStartTime = 0;
+    let autoStartInterval = null;
+    let relayCurrentTurnTarget = 3.0;
+
+    function startAutoStartTimer(onCompleteCallback) {
+      clearAutoStartTimer();
+      let timeLeft = 10;
+      
+      const updateLabel = (sec) => {
+        const buzzerScreen = document.getElementById('buzzer-screen');
+        const relayScreen = document.getElementById('relay-game-screen');
+        
+        if (buzzerScreen.classList.contains('active')) {
+          const instruction = document.getElementById('buzzer-instruction');
+          if (instruction) {
+            instruction.textContent = `Tap the button to start (Auto-starting in ${sec}s)`;
+          }
+        } else if (relayScreen.classList.contains('active')) {
+          const instruction = document.getElementById('relay-buzzer-instruction');
+          if (instruction) {
+            instruction.textContent = `Tap to guess exactly ${relayCurrentTurnTarget.toFixed(1)}s (Auto-starting in ${sec}s)`;
+          }
+        }
+      };
+
+      updateLabel(timeLeft);
+
+      autoStartInterval = setInterval(() => {
+        timeLeft--;
+        if (timeLeft > 0) {
+          updateLabel(timeLeft);
+        } else {
+          clearAutoStartTimer();
+          onCompleteCallback();
+        }
+      }, 1000);
+    }
+
+    function clearAutoStartTimer() {
+      if (autoStartInterval) {
+        clearInterval(autoStartInterval);
+        autoStartInterval = null;
+      }
+    }
 
     function startBuzzerForPlayer(playerIdx) {
       game.currentPlayerIndex = playerIdx;
@@ -2939,10 +2999,16 @@ body::after {
       buzzerBtn.innerHTML = 'TAP TO<br>START<span class="buzzer-sublabel">then tap again to stop</span>';
       buzzerState = 'ready';
       if (buzzerTimeout) clearTimeout(buzzerTimeout);
+
+      startAutoStartTimer(() => {
+        buzzerBtn.click();
+      });
+
       showScreen('buzzer-screen');
     }
 
     buzzerBtn.addEventListener('click', () => {
+      clearAutoStartTimer();
       if (isOnlineMode) {
         if (buzzerState === 'ready') {
           net.startBuzzer();
@@ -2967,6 +3033,7 @@ body::after {
 
     const relayBuzzerBtn = document.getElementById('relay-buzzer-btn');
     relayBuzzerBtn.addEventListener('click', () => {
+      clearAutoStartTimer();
       if (relayBuzzerState === 'ready') {
         relayBuzzerState = 'running';
         relayBuzzerStartTime = Date.now();
