@@ -22,7 +22,8 @@ class Room {
       blindMax: 15,
       teamMode: false,
       teamScoringRule: 'sum',    // 'sum' | 'average'
-      relayTarget: 30            // target seconds for relay countdown
+      relayTarget: 30,           // target seconds for relay countdown
+      relayRoundsPerPlayer: 2    // rounds per player for relay countdown
     };
     this.state = 'LOBBY';
     this.currentRound = 0;
@@ -182,7 +183,7 @@ class Room {
     if (settings.blindMax != null) this.settings.blindMax = parseFloat(settings.blindMax);
     if (settings.teamMode != null) this.settings.teamMode = !!settings.teamMode;
     if (settings.teamScoringRule) this.settings.teamScoringRule = settings.teamScoringRule;
-    if (settings.relayTarget != null) this.settings.relayTarget = parseFloat(settings.relayTarget) || 30;
+    if (settings.relayRoundsPerPlayer != null) this.settings.relayRoundsPerPlayer = parseInt(settings.relayRoundsPerPlayer) || 2;
 
     // Relay countdown requires team mode
     if (this.settings.gameMode === 'relaycountdown') {
@@ -533,8 +534,8 @@ class Room {
     this.relayTeamTallies = { A: 0, B: 0 };
     this.relayRoundHistory = { A: [], B: [] };
     this.relayTurnNumber = 1;
-    this.relayTurnTarget = 3;
-    this.relayRunningTargetSum = 3;
+    this.relayTurnTarget = Math.min(3, this.settings.relayTarget || 30);
+    this.relayRunningTargetSum = this.relayTurnTarget;
     this.relayGuessesThisTurn = { A: null, B: null };
     this.clearTimeouts();
     this.broadcast('game:returnToLobby', {});
@@ -548,15 +549,31 @@ class Room {
     this.relayTeamTallies = { A: 0, B: 0 };
     this.relayRoundHistory = { A: [], B: [] };
     this.relayCurrentTurnIndex = { A: 0, B: 0 };
-    this.relayTurnNumber = 1;
-    this.relayTurnTarget = 3;
-    this.relayRunningTargetSum = 3;
     this.relayGuessesThisTurn = { A: null, B: null };
 
     this.relayTurnOrder = {
       A: this.getTeamPlayers('A').filter(p => p.connected).map(p => p.id),
       B: this.getTeamPlayers('B').filter(p => p.connected).map(p => p.id)
     };
+
+    const playersPerTeam = Math.max(this.relayTurnOrder.A.length, this.relayTurnOrder.B.length);
+    const roundsPerPlayer = this.settings.relayRoundsPerPlayer || 2;
+    this.relayTotalRounds = Math.max(2, playersPerTeam * roundsPerPlayer);
+
+    // Pre-generate random targets for each round
+    this.relayRoundTargets = [];
+    let sum = 0;
+    for (let i = 0; i < this.relayTotalRounds; i++) {
+      // Random target between 3.0s and 12.0s with 1 decimal place
+      const rTarget = (Math.floor(Math.random() * 91) + 30) / 10;
+      this.relayRoundTargets.push(rTarget);
+      sum += rTarget;
+    }
+    this.settings.relayTarget = sum;
+    this.relayRunningTargetSum = sum;
+
+    this.relayTurnNumber = 1;
+    this.relayTurnTarget = this.relayRoundTargets[0];
 
     this.broadcast('relay:start', {
       targetTime: this.settings.relayTarget,
@@ -649,7 +666,7 @@ class Room {
       this.relayTeamTallies.A += guessA.guess;
       this.relayTeamTallies.B += guessB.guess;
 
-      if (this.relayRunningTargetSum >= this.settings.relayTarget) {
+      if (this.relayTurnNumber >= this.relayTotalRounds) {
         // Relay complete! Start reveal phase after a short delay
         this.countdownTimeouts.push(setTimeout(() => {
           this.startRelayReveal();
@@ -658,8 +675,7 @@ class Room {
         // Setup next turn
         this.relayGuessesThisTurn = { A: null, B: null };
         this.relayTurnNumber++;
-        this.relayTurnTarget = 3 * this.relayTurnNumber;
-        this.relayRunningTargetSum += this.relayTurnTarget;
+        this.relayTurnTarget = this.relayRoundTargets[this.relayTurnNumber - 1];
 
         this.relayCurrentTurnIndex.A = (this.relayCurrentTurnIndex.A + 1) % this.relayTurnOrder.A.length;
         this.relayCurrentTurnIndex.B = (this.relayCurrentTurnIndex.B + 1) % this.relayTurnOrder.B.length;
