@@ -11,7 +11,7 @@ const MAX_PLAYERS = 12;
 class Room {
   constructor(code, io) {
     this.code = code;
-    this.io = io;
+    this.io = ioa;
     this.players = [];
     this.settings = {
       gameMode: 'timeattack',
