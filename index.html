@@ -1258,13 +1258,15 @@ body::after {
       <div class="relay-turn-card" id="relay-turn-card">
         <div class="relay-turn-label" id="relay-turn-label">YOUR TURN</div>
         <div class="relay-turn-player" id="relay-turn-player">Waiting...</div>
-        <div class="relay-turn-input-area" id="relay-turn-input-area" style="display:none;">
-          <div class="blind-guess-prompt">How many seconds to add?</div>
-          <div class="blind-guess-input-wrapper">
-            <input id="relay-guess-input" class="relay-guess-input" type="number" min="0" max="120" step="0.1" placeholder="0.0">
-            <span class="blind-guess-unit">sec</span>
+        <div class="relay-turn-input-area" id="relay-turn-input-area" style="display:none; align-items:center; flex-direction:column;">
+          <div class="blind-guess-prompt" id="relay-buzzer-instruction">Tap to guess exactly 3.0 seconds!</div>
+          <div class="buzzer-wrapper" style="margin: 15px 0;">
+            <div class="buzzer-ring"></div>
+            <div class="buzzer-ring"></div>
+            <button id="relay-buzzer-btn" class="buzzer-btn state-ready" type="button" style="width: 160px; height: 160px; font-size: 1.3rem;">
+              TAP TO<br>START
+            </button>
           </div>
-          <button id="relay-guess-submit-btn" class="btn btn-green" type="button" style="width: 180px;">SUBMIT</button>
         </div>
         <div class="relay-waiting-message" id="relay-waiting-message" style="display:none;">
           Waiting for other players...
@@ -1627,6 +1629,15 @@ body::after {
         
         // Connect to server (protocol relative)
         this.socket = io(window.location.origin);
+
+        this.socket.on('connect', () => {
+          console.log('[Socket] Connected successfully');
+        });
+
+        this.socket.on('connect_error', (error) => {
+          console.error('[Socket] Connection error:', error);
+          alert('Multiplayer connection failed. Make sure the backend server is running and accessible.');
+        });
 
         // Bind server -> client events
         this.socket.on('room:created', ({ code, playerId, settings }) => {
@@ -2037,14 +2048,14 @@ body::after {
         });
 
         // ===== RELAY COUNTDOWN EVENTS =====
-        this.socket.on('relay:start', ({ targetTime, teams, turnOrder, tallies }) => {
+        this.socket.on('relay:start', ({ targetTime, teams, turnOrder }) => {
           audio.init();
           relayTargetTime = targetTime;
           relayMyTeam = teams[this.playerId] || 'A';
 
           document.getElementById('relay-target-badge').textContent = `🎯 TARGET: ${targetTime.toFixed(1)} SECONDS`;
-          document.getElementById('relay-tally-a').textContent = `0.0 / ${targetTime.toFixed(1)}s`;
-          document.getElementById('relay-tally-b').textContent = `0.0 / ${targetTime.toFixed(1)}s`;
+          document.getElementById('relay-tally-a').textContent = `🔵 Team A: Turn 1`;
+          document.getElementById('relay-tally-b').textContent = `🔴 Team B: Turn 1`;
           document.getElementById('relay-progress-a').style.width = '0%';
           document.getElementById('relay-progress-b').style.width = '0%';
 
@@ -2057,37 +2068,35 @@ body::after {
           showScreen('relay-game-screen');
         });
 
-        this.socket.on('relay:yourTurn', ({ team, currentTally, targetTime, remaining, turnNumber }) => {
-          relayTargetTime = targetTime;
+        this.socket.on('relay:yourTurn', ({ team, turnTarget, turnNumber }) => {
           document.getElementById('relay-turn-label').textContent = `TURN ${turnNumber} — YOUR TURN!`;
-          document.getElementById('relay-turn-player').textContent = 'Add your time!';
+          document.getElementById('relay-turn-player').textContent = `Guess ${turnTarget} seconds!`;
           document.getElementById('relay-turn-player').style.color = team === 'A' ? '#4a9eff' : '#e63946';
-          document.getElementById('relay-turn-input-area').style.display = '';
+          document.getElementById('relay-turn-input-area').style.display = 'flex';
           document.getElementById('relay-waiting-message').style.display = 'none';
 
-          const guessInput = document.getElementById('relay-guess-input');
-          guessInput.value = '';
-          guessInput.disabled = false;
-          guessInput.placeholder = remaining.toFixed(1) + ' left';
-          document.getElementById('relay-guess-submit-btn').disabled = false;
-          document.getElementById('relay-guess-submit-btn').textContent = 'SUBMIT';
-
-          guessInput.focus();
+          document.getElementById('relay-buzzer-instruction').textContent = `Tap to guess exactly ${turnTarget.toFixed(1)} seconds!`;
+          const btn = document.getElementById('relay-buzzer-btn');
+          btn.className = 'buzzer-btn state-ready';
+          btn.innerHTML = 'TAP TO<br>START<span class="buzzer-sublabel">then tap again to stop</span>';
+          relayBuzzerState = 'ready';
           audio.buzzerStart();
         });
 
-        this.socket.on('relay:turnUpdate', ({ team, currentPlayerId, currentPlayerName, currentTally, targetTime, remaining, turnNumber }) => {
-          relayTargetTime = targetTime;
-          const pct = Math.min(100, (currentTally / targetTime) * 100);
+        this.socket.on('relay:turnUpdate', ({ team, currentPlayerId, currentPlayerName, turnTarget, turnNumber }) => {
+          let targetSum = 0;
+          for (let i = 1; i < turnNumber; i++) {
+            targetSum += 3 * i;
+          }
+          const pct = Math.min(100, (targetSum / relayTargetTime) * 100);
           if (team === 'A') {
             document.getElementById('relay-progress-a').style.width = pct + '%';
-            document.getElementById('relay-tally-a').textContent = `${currentTally.toFixed(1)} / ${targetTime.toFixed(1)}s`;
+            document.getElementById('relay-tally-a').textContent = `🔵 Team A: Turn ${turnNumber} (${currentPlayerName})`;
           } else {
             document.getElementById('relay-progress-b').style.width = pct + '%';
-            document.getElementById('relay-tally-b').textContent = `${currentTally.toFixed(1)} / ${targetTime.toFixed(1)}s`;
+            document.getElementById('relay-tally-b').textContent = `🔴 Team B: Turn ${turnNumber} (${currentPlayerName})`;
           }
 
-          // If it's not our turn, show waiting
           if (currentPlayerId !== this.playerId) {
             const myTeam = this.players.find(p => p.id === this.playerId)?.team;
             if (team === myTeam) {
@@ -2096,33 +2105,28 @@ body::after {
               document.getElementById('relay-turn-player').style.color = team === 'A' ? '#4a9eff' : '#e63946';
               document.getElementById('relay-turn-input-area').style.display = 'none';
               document.getElementById('relay-waiting-message').style.display = '';
-              document.getElementById('relay-waiting-message').textContent = `Waiting for ${currentPlayerName}...`;
+              document.getElementById('relay-waiting-message').textContent = `Waiting for ${currentPlayerName} to guess ${turnTarget}s...`;
             }
           }
         });
 
         this.socket.on('relay:guessDone', ({ team, playerName, turnNumber }) => {
-          // Update progress bars if needed
           audio.countdownBeep();
+          if (team === 'A') {
+            document.getElementById('relay-tally-a').textContent = `🔵 Team A: Turn ${turnNumber} (${playerName} - ✓ GUESSED)`;
+          } else {
+            document.getElementById('relay-tally-b').textContent = `🔴 Team B: Turn ${turnNumber} (${playerName} - ✓ GUESSED)`;
+          }
         });
 
         this.socket.on('relay:guessConfirmed', ({ guess }) => {
           document.getElementById('relay-turn-input-area').style.display = 'none';
           document.getElementById('relay-waiting-message').style.display = '';
-          document.getElementById('relay-waiting-message').textContent = '✓ Submitted! Waiting...';
+          document.getElementById('relay-waiting-message').textContent = '✓ Guessed! Waiting for other team...';
           audio.buzzerStop();
         });
 
-        this.socket.on('relay:teamDone', ({ team, totalTurns }) => {
-          const pct = 100;
-          if (team === 'A') {
-            document.getElementById('relay-progress-a').style.width = '100%';
-          } else {
-            document.getElementById('relay-progress-b').style.width = '100%';
-          }
-        });
-
-        this.socket.on('relay:revealStart', ({ targetTime, totalRoundsA, totalRoundsB }) => {
+        this.socket.on('relay:revealStart', ({ targetTime, totalRounds }) => {
           document.getElementById('relay-reveal-target').textContent = `🎯 TARGET: ${targetTime.toFixed(1)} SECONDS`;
           document.getElementById('relay-reveal-rounds').innerHTML = '';
           showScreen('relay-reveal-screen');
@@ -2134,31 +2138,24 @@ body::after {
           const card = document.createElement('div');
           card.className = 'relay-reveal-card';
 
-          let aHTML = '<div class="reveal-team-entry" style="opacity:0.3;"><div class="reveal-player">—</div></div>';
-          let bHTML = '<div class="reveal-team-entry" style="opacity:0.3;"><div class="reveal-player">—</div></div>';
+          const a = data.teamA;
+          const b = data.teamB;
 
-          if (data.teamA) {
-            const a = data.teamA;
-            aHTML = `<div class="reveal-team-entry" style="border-left: 4px solid #4a9eff;">
-              <div class="reveal-player" style="color:#4a9eff;">${a.playerName}</div>
-              <div class="reveal-guess" style="color:#fff;">+${a.guess.toFixed(1)}s</div>
-              <div class="reveal-total">Running: ${a.runningTotal.toFixed(1)} / ${a.targetTime.toFixed(1)}s</div>
-            </div>`;
-          }
+          const aHTML = `<div class="reveal-team-entry" style="border-left: 4px solid #4a9eff;">
+            <div class="reveal-player" style="color:#4a9eff;">${a.playerName}</div>
+            <div class="reveal-guess" style="color:#fff;">${a.guess.toFixed(2)}s</div>
+            <div class="reveal-total" style="color:var(--text-muted);">Target: ${data.turnTarget.toFixed(1)}s (±${a.diff.toFixed(2)}s)</div>
+          </div>`;
 
-          if (data.teamB) {
-            const b = data.teamB;
-            bHTML = `<div class="reveal-team-entry" style="border-left: 4px solid #e63946;">
-              <div class="reveal-player" style="color:#e63946;">${b.playerName}</div>
-              <div class="reveal-guess" style="color:#fff;">+${b.guess.toFixed(1)}s</div>
-              <div class="reveal-total">Running: ${b.runningTotal.toFixed(1)} / ${b.targetTime.toFixed(1)}s</div>
-            </div>`;
-          }
+          const bHTML = `<div class="reveal-team-entry" style="border-left: 4px solid #e63946;">
+            <div class="reveal-player" style="color:#e63946;">${b.playerName}</div>
+            <div class="reveal-guess" style="color:#fff;">${b.guess.toFixed(2)}s</div>
+            <div class="reveal-total" style="color:var(--text-muted);">Target: ${data.turnTarget.toFixed(1)}s (±${b.diff.toFixed(2)}s)</div>
+          </div>`;
 
-          card.innerHTML = `<div class="label" style="grid-column:1/-1; text-align:center; margin-bottom:4px;">Round ${data.roundNumber}</div>${aHTML}${bHTML}`;
+          card.innerHTML = `<div class="label" style="grid-column:1/-1; text-align:center; margin-bottom:4px;">Round ${data.roundNumber} (Target: ${data.turnTarget.toFixed(1)}s)</div>${aHTML}${bHTML}`;
           container.appendChild(card);
 
-          // Scroll into view
           container.scrollTop = container.scrollHeight;
           audio.countdownBeep();
         });
@@ -2186,18 +2183,17 @@ body::after {
           compEl.innerHTML = `
             <div class="relay-final-team ${winner === 'A' ? 'winner' : ''}">
               <div class="team-name" style="color:#4a9eff;">🔵 Team A</div>
-              <div class="team-tally" style="color:#fff;">${teamA.finalTally.toFixed(1)}s</div>
+              <div class="team-tally" style="color:#fff;">${teamA.finalTally.toFixed(2)}s</div>
               <div class="team-diff" style="color:${diffColorA};">±${teamA.diff.toFixed(2)}s off</div>
             </div>
             <div class="relay-vs">VS</div>
             <div class="relay-final-team ${winner === 'B' ? 'winner' : ''}">
               <div class="team-name" style="color:#e63946;">🔴 Team B</div>
-              <div class="team-tally" style="color:#fff;">${teamB.finalTally.toFixed(1)}s</div>
+              <div class="team-tally" style="color:#fff;">${teamB.finalTally.toFixed(2)}s</div>
               <div class="team-diff" style="color:${diffColorB};">±${teamB.diff.toFixed(2)}s off</div>
             </div>
           `;
 
-          // Breakdowns
           const renderBreakdown = (history, containerId) => {
             const el = document.getElementById(containerId);
             el.innerHTML = '';
@@ -2207,8 +2203,8 @@ body::after {
               row.innerHTML = `
                 <div style="color:var(--text-muted);">${i + 1}</div>
                 <div style="color:${entry.playerColor};">${entry.playerName}</div>
-                <div style="color:var(--gold);">+${entry.guess.toFixed(1)}s</div>
-                <div style="color:var(--text-secondary);">${entry.runningTotal.toFixed(1)}s</div>
+                <div style="color:var(--gold);">${entry.guess.toFixed(2)}s</div>
+                <div style="color:var(--text-secondary);">Target: ${entry.target.toFixed(1)}s</div>
               `;
               el.appendChild(row);
             });
@@ -2217,7 +2213,6 @@ body::after {
           renderBreakdown(teamA.history, 'relay-breakdown-a');
           renderBreakdown(teamB.history, 'relay-breakdown-b');
 
-          // Show play again for host
           const playBtn = document.getElementById('relay-play-again-btn');
           if (this.isHost) {
             playBtn.style.display = '';
@@ -2580,20 +2575,7 @@ body::after {
       net.socket.emit('room:autoBalance');
     });
 
-    // Relay guess submit
-    document.getElementById('relay-guess-submit-btn').addEventListener('click', () => {
-      const input = document.getElementById('relay-guess-input');
-      const val = parseFloat(input.value);
-      if (isNaN(val) || val < 0) {
-        input.style.borderColor = 'var(--red)';
-        setTimeout(() => { input.style.borderColor = ''; }, 600);
-        return;
-      }
-      input.disabled = true;
-      document.getElementById('relay-guess-submit-btn').disabled = true;
-      document.getElementById('relay-guess-submit-btn').textContent = '✓ SENT';
-      net.socket.emit('relay:guess', { guess: val });
-    });
+
 
     // Relay play again
     document.getElementById('relay-play-again-btn').addEventListener('click', () => {
@@ -2885,6 +2867,9 @@ body::after {
     let buzzerStartTime = 0;
     let buzzerTimeout = null;
 
+    let relayBuzzerState = 'ready';
+    let relayBuzzerStartTime = 0;
+
     function startBuzzerForPlayer(playerIdx) {
       game.currentPlayerIndex = playerIdx;
       const playerName = game.players[playerIdx];
@@ -2921,6 +2906,30 @@ body::after {
         buzzerTimeout = setTimeout(() => { if (buzzerState === 'running') finishBuzzer(); }, game.targetTime + 15000);
       } else if (buzzerState === 'running') {
         finishBuzzer();
+      }
+    });
+
+    const relayBuzzerBtn = document.getElementById('relay-buzzer-btn');
+    relayBuzzerBtn.addEventListener('click', () => {
+      if (relayBuzzerState === 'ready') {
+        relayBuzzerState = 'running';
+        relayBuzzerStartTime = Date.now();
+        relayBuzzerBtn.className = 'buzzer-btn state-running';
+        relayBuzzerBtn.innerHTML = 'TAP TO<br>STOP<span class="buzzer-sublabel">when you think time is up</span>';
+        audio.buzzerStart();
+      } else if (relayBuzzerState === 'running') {
+        relayBuzzerState = 'done';
+        const elapsed = (Date.now() - relayBuzzerStartTime) / 1000;
+        relayBuzzerBtn.className = 'buzzer-btn state-done';
+        relayBuzzerBtn.innerHTML = '✓<br>DONE';
+        audio.buzzerStop();
+        
+        // Emit guess to server
+        net.socket.emit('relay:guess', { guess: elapsed });
+        
+        document.getElementById('relay-turn-input-area').style.display = 'none';
+        document.getElementById('relay-waiting-message').style.display = 'flex';
+        document.getElementById('relay-waiting-message').textContent = '✓ Guessed! Waiting for other team...';
       }
     });
 
