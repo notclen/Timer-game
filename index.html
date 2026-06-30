@@ -587,10 +587,216 @@ body::after {
   .blind-pulse-ring { width: 140px; height: 140px; }
   .blind-guess-input { width: 160px; font-size: 2rem; }
 }
+/* ===== TEAM MODE STYLES ===== */
+.team-toggle-row {
+  display: flex; align-items: center; gap: 12px; margin-top: 12px;
+  padding: 12px 16px; background: var(--bg-card-alt); border-radius: var(--radius-sm);
+  border: 3px solid var(--border-subtle);
+}
+.team-toggle-row label { flex: 1; font-family: var(--font-heading); font-size: 0.95rem; cursor: pointer; }
+.team-toggle-row input[type="checkbox"] {
+  width: 24px; height: 24px; cursor: pointer; accent-color: var(--green);
+}
+.team-scoring-row { margin-top: 8px; }
 
+.team-assignment-panel { margin-top: 12px; }
+.team-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+.team-column {
+  background: var(--bg-card-alt); border-radius: var(--radius-sm);
+  border: 3px solid var(--border-subtle); padding: 12px; min-height: 120px;
+}
+.team-column-header {
+  font-family: var(--font-heading); font-size: 1rem; text-transform: uppercase;
+  text-align: center; padding: 8px; margin-bottom: 8px;
+  border-radius: 8px; border: 3px solid var(--border-subtle);
+  box-shadow: 0 3px 0 var(--border-subtle);
+}
+.team-column-header.team-a { background: #4a9eff; color: #fff; }
+.team-column-header.team-b { background: #e63946; color: #fff; }
 
-  <script src="/socket.io/socket.io.js"></script>
+.team-player-chip {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  background: #fff; border: 2px solid var(--border-subtle);
+  border-radius: 10px; margin-bottom: 6px; cursor: pointer;
+  font-family: var(--font-heading); font-size: 0.9rem; color: var(--border-subtle);
+  transition: transform 0.1s, box-shadow 0.1s;
+  box-shadow: 0 2px 0 rgba(0,0,0,0.1);
+}
+.team-player-chip:hover { transform: translateY(1px); box-shadow: 0 1px 0 rgba(0,0,0,0.1); }
+.team-player-chip .chip-dot {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--border-subtle);
+}
+
+.team-score-panel { margin-bottom: 16px; }
+.team-score-row {
+  display: flex; justify-content: space-around; gap: 12px; padding: 12px;
+}
+.team-score-card {
+  flex: 1; text-align: center; padding: 16px;
+  background: var(--bg-card-alt); border-radius: var(--radius-sm);
+  border: 3px solid var(--border-subtle); box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+}
+.team-score-card .team-label {
+  font-family: var(--font-heading); font-size: 1rem; text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.team-score-card .team-total {
+  font-family: var(--font-heading); font-size: 2rem;
+  text-shadow: 3px 3px 0 var(--border-subtle);
+}
+
+/* Guest team roster */
+.guest-team-roster {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;
+}
+.guest-team-col { font-size: 0.85rem; font-family: var(--font-heading); }
+.guest-team-col .team-badge {
+  display: inline-block; padding: 3px 8px; border-radius: 6px;
+  font-size: 0.75rem; color: #fff; margin-bottom: 4px;
+  border: 2px solid var(--border-subtle);
+}
+.guest-team-col .team-badge.team-a { background: #4a9eff; }
+.guest-team-col .team-badge.team-b { background: #e63946; }
+
+/* ===== RELAY COUNTDOWN STYLES ===== */
+#relay-game-screen { background: rgba(0,0,0,0.75); }
+#relay-reveal-screen { background: rgba(0,0,0,0.85); }
+#relay-final-screen { background: rgba(0,0,0,0.8); }
+
+.relay-container {
+  width: 100%; max-width: 600px; display: flex; flex-direction: column;
+  align-items: center; gap: 16px; z-index: 2;
+}
+
+.relay-target-badge {
+  padding: 10px 24px; background: var(--gold); color: var(--border-subtle);
+  font-family: var(--font-heading); font-size: 1.1rem; border-radius: var(--radius-sm);
+  border: 3px solid var(--border-subtle); box-shadow: 3px 3px 0 var(--border-subtle);
+  text-transform: uppercase;
+}
+
+.relay-progress-container { width: 100%; }
+.relay-progress-bar {
+  width: 100%; height: 28px; background: var(--border-subtle);
+  border-radius: 14px; overflow: hidden; position: relative;
+  border: 3px solid var(--border-subtle);
+}
+.relay-progress-fill {
+  height: 100%; border-radius: 11px; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.relay-progress-fill.team-a { background: linear-gradient(90deg, #4a9eff, #6cb4ff); }
+.relay-progress-fill.team-b { background: linear-gradient(90deg, #e63946, #ff6b7a); }
+.relay-progress-label {
+  font-family: var(--font-heading); font-size: 0.85rem; color: var(--text-secondary);
+  text-align: center; margin-top: 4px;
+}
+
+.relay-turn-card {
+  width: 100%; padding: 24px; text-align: center;
+  background: var(--bg-card); border: 4px solid var(--border-subtle);
+  border-radius: var(--radius); box-shadow: 0 8px 0 rgba(0,0,0,0.25);
+}
+.relay-turn-label {
+  font-family: var(--font-heading); font-size: 1rem; color: var(--text-muted);
+  text-transform: uppercase; margin-bottom: 8px;
+}
+.relay-turn-player {
+  font-family: var(--font-heading); font-style: italic; font-size: 2rem;
+  text-shadow: 3px 3px 0 var(--border-subtle);
+}
+.relay-turn-input-area {
+  display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 16px;
+}
+.relay-guess-input {
+  width: 160px; padding: 16px; background: #fff; border: 4px solid var(--border-subtle);
+  border-radius: var(--radius); color: var(--border-subtle); font-family: var(--font-heading);
+  font-size: 2.4rem; text-align: center; outline: none;
+  box-shadow: 0 6px 0 rgba(0,0,0,0.2); -moz-appearance: textfield;
+}
+.relay-guess-input:focus { border-color: var(--cyan); }
+
+.relay-waiting-message {
+  font-family: var(--font-heading); font-size: 1.2rem; color: var(--text-secondary);
+  text-shadow: 2px 2px 0 var(--border-subtle); text-align: center;
+  animation: relay-pulse 2s ease-in-out infinite;
+}
+@keyframes relay-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* Reveal */
+.relay-reveal-container {
+  width: 100%; max-width: 650px; display: flex; flex-direction: column;
+  align-items: center; gap: 20px; z-index: 2;
+}
+
+.relay-reveal-card {
+  width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  animation: reveal-slide-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  opacity: 0; transform: translateY(30px);
+}
+@keyframes reveal-slide-in {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reveal-team-entry {
+  padding: 16px; background: var(--bg-card); border-radius: var(--radius-sm);
+  border: 3px solid var(--border-subtle); box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+}
+.reveal-team-entry .reveal-player {
+  font-family: var(--font-heading); font-size: 1.1rem; margin-bottom: 4px;
+}
+.reveal-team-entry .reveal-guess {
+  font-family: var(--font-heading); font-size: 1.8rem;
+  text-shadow: 2px 2px 0 var(--border-subtle);
+}
+.reveal-team-entry .reveal-total {
+  font-family: var(--font-body); font-size: 0.9rem; color: var(--text-muted);
+  font-weight: 600; margin-top: 4px;
+}
+
+/* Relay Final */
+.relay-final-container {
+  width: 100%; max-width: 650px; display: flex; flex-direction: column;
+  align-items: center; gap: 20px; z-index: 2;
+}
+.relay-final-comparison {
+  display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px;
+  width: 100%; align-items: center;
+}
+.relay-final-team {
+  text-align: center; padding: 20px;
+  background: var(--bg-card); border-radius: var(--radius);
+  border: 4px solid var(--border-subtle); box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+}
+.relay-final-team.winner { border-color: var(--gold); box-shadow: 0 6px 0 var(--gold-dim); }
+.relay-final-team .team-name {
+  font-family: var(--font-heading); font-size: 1.4rem; text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.relay-final-team .team-tally {
+  font-family: var(--font-heading); font-size: 2.5rem;
+  text-shadow: 3px 3px 0 var(--border-subtle);
+}
+.relay-final-team .team-diff {
+  font-family: var(--font-body); font-weight: 700; font-size: 1rem; margin-top: 4px;
+}
+.relay-vs { font-family: var(--font-heading); font-size: 1.5rem; color: var(--text-muted); }
+
+.relay-breakdown-table {
+  width: 100%; margin-top: 8px;
+}
+.relay-breakdown-row {
+  display: grid; grid-template-columns: 30px 1fr auto auto; gap: 8px;
+  padding: 8px 12px; border-bottom: 2px solid rgba(255,255,255,0.05);
+  font-family: var(--font-heading); font-size: 0.9rem;
+}
+.relay-breakdown-row:last-child { border-bottom: none; }
+
 </style>
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
@@ -685,6 +891,7 @@ body::after {
               <select id="online-game-mode-select">
                 <option value="timeattack" selected>⏱ Time Attack</option>
                 <option value="blindguess">🙈 Blind Guess</option>
+                <option value="relaycountdown">🔄 Relay Countdown</option>
               </select>
             </div>
             <div class="setting-group">
@@ -718,6 +925,45 @@ body::after {
               <span class="range-sep">SEC</span>
             </div>
           </div>
+
+          <!-- Relay Target Time -->
+          <div id="online-relay-target-group" class="setting-group" style="display:none; margin-top: 12px;">
+            <label class="label" for="online-relay-target-input">Team Target Total (seconds)</label>
+            <input id="online-relay-target-input" class="input-field" type="number" min="10" max="120" step="1" value="30">
+          </div>
+
+          <!-- Team Mode Toggle -->
+          <div class="team-toggle-row">
+            <label for="online-team-mode-toggle">👥 Team Mode</label>
+            <input type="checkbox" id="online-team-mode-toggle">
+          </div>
+
+          <!-- Team Scoring Rule -->
+          <div id="online-team-scoring-group" class="setting-group team-scoring-row" style="display:none;">
+            <label class="label" for="online-team-scoring-select">Team Scoring</label>
+            <select id="online-team-scoring-select">
+              <option value="sum" selected>Sum (Total Points)</option>
+              <option value="average">Average Points</option>
+            </select>
+          </div>
+
+          <!-- Team Assignment UI -->
+          <div id="online-team-assignment" class="team-assignment-panel" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+              <span class="label">Team Assignments</span>
+              <button id="auto-balance-btn" class="btn btn-dark" type="button" style="padding: 6px 14px; font-size: 0.8rem;">🔀 Auto-Balance</button>
+            </div>
+            <div class="team-columns">
+              <div class="team-column">
+                <div class="team-column-header team-a">🔵 Team A</div>
+                <div id="team-a-players"></div>
+              </div>
+              <div class="team-column">
+                <div class="team-column-header team-b">🔴 Team B</div>
+                <div id="team-b-players"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -728,6 +974,8 @@ body::after {
           <div>🎮 Mode: <span id="guest-setting-mode" style="color: var(--gold);">Time Attack</span></div>
           <div>🔄 Rounds: <span id="guest-setting-rounds" style="color: var(--gold);">3 Rounds</span></div>
           <div id="guest-setting-time-row">🎯 Target: <span id="guest-setting-time" style="color: var(--gold);">Random</span></div>
+          <div id="guest-setting-team-row" style="display:none;">👥 Teams: <span id="guest-setting-team" style="color: var(--gold);">Enabled</span></div>
+          <div id="guest-team-roster" class="guest-team-roster" style="display:none;"></div>
         </div>
       </div>
 
@@ -952,6 +1200,88 @@ body::after {
       <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
         <button id="stats-back-btn" class="btn btn-dark" type="button">← BACK</button>
         <button id="stats-play-again-btn" class="btn btn-gold" type="button">🔄 PLAY AGAIN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== RELAY GAME SCREEN ===== -->
+  <div id="relay-game-screen" class="screen">
+    <div class="relay-container">
+      <div class="relay-target-badge" id="relay-target-badge">🎯 TARGET: 30.0 SECONDS</div>
+
+      <div class="relay-progress-container">
+        <div class="panel-header" style="margin-bottom: 4px;">🔵 Team A</div>
+        <div class="relay-progress-bar">
+          <div class="relay-progress-fill team-a" id="relay-progress-a" style="width: 0%"></div>
+        </div>
+        <div class="relay-progress-label" id="relay-tally-a">0.0 / 30.0s</div>
+      </div>
+
+      <div class="relay-progress-container">
+        <div class="panel-header" style="margin-bottom: 4px;">🔴 Team B</div>
+        <div class="relay-progress-bar">
+          <div class="relay-progress-fill team-b" id="relay-progress-b" style="width: 0%"></div>
+        </div>
+        <div class="relay-progress-label" id="relay-tally-b">0.0 / 30.0s</div>
+      </div>
+
+      <div class="relay-turn-card" id="relay-turn-card">
+        <div class="relay-turn-label" id="relay-turn-label">YOUR TURN</div>
+        <div class="relay-turn-player" id="relay-turn-player">Waiting...</div>
+        <div class="relay-turn-input-area" id="relay-turn-input-area" style="display:none;">
+          <div class="blind-guess-prompt">How many seconds to add?</div>
+          <div class="blind-guess-input-wrapper">
+            <input id="relay-guess-input" class="relay-guess-input" type="number" min="0" max="120" step="0.1" placeholder="0.0">
+            <span class="blind-guess-unit">sec</span>
+          </div>
+          <button id="relay-guess-submit-btn" class="btn btn-green" type="button" style="width: 180px;">SUBMIT</button>
+        </div>
+        <div class="relay-waiting-message" id="relay-waiting-message" style="display:none;">
+          Waiting for other players...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== RELAY REVEAL SCREEN ===== -->
+  <div id="relay-reveal-screen" class="screen">
+    <div class="relay-reveal-container">
+      <div class="relay-target-badge" id="relay-reveal-target">🎯 TARGET: 30.0 SECONDS</div>
+      <h2 class="heading heading-lg" style="text-align:center; margin-bottom: 8px;">ROUND-BY-ROUND REVEAL</h2>
+
+      <div class="relay-progress-container">
+        <div style="display:flex; justify-content:space-between; margin-bottom: 4px;">
+          <span class="label" style="color:#4a9eff;">🔵 Team A</span>
+          <span class="label" style="color:#e63946;">🔴 Team B</span>
+        </div>
+      </div>
+
+      <div id="relay-reveal-rounds" style="width:100%; display:flex; flex-direction:column; gap:12px;"></div>
+    </div>
+  </div>
+
+  <!-- ===== RELAY FINAL SCREEN ===== -->
+  <div id="relay-final-screen" class="screen">
+    <div class="relay-final-container">
+      <div class="crown-icon" id="relay-crown">👑</div>
+      <h2 class="heading heading-xl" id="relay-winner-text" style="text-align:center; color:var(--gold); text-shadow: 5px 5px 0 var(--border-subtle);">TEAM A WINS!</h2>
+
+      <div class="relay-target-badge" id="relay-final-target">🎯 TARGET: 30.0 SECONDS</div>
+
+      <div class="relay-final-comparison" id="relay-final-comparison"></div>
+
+      <div class="panel" style="width:100%;">
+        <div class="panel-header">📊 Team A Breakdown</div>
+        <div class="panel-body" id="relay-breakdown-a"></div>
+      </div>
+
+      <div class="panel" style="width:100%;">
+        <div class="panel-header">📊 Team B Breakdown</div>
+        <div class="panel-body" id="relay-breakdown-b"></div>
+      </div>
+
+      <div class="final-actions">
+        <button id="relay-play-again-btn" class="btn btn-gold" type="button" style="display:none;">🔄 PLAY AGAIN</button>
       </div>
     </div>
   </div>
@@ -1628,6 +1958,236 @@ body::after {
         this.socket.on('room:playerDisconnected', ({ playerName }) => {
           console.log(`${playerName} disconnected`);
         });
+
+        this.socket.on('room:teamsUpdated', ({ teams }) => {
+          this.updateTeamAssignmentUI(teams);
+        });
+
+        // ===== RELAY COUNTDOWN EVENTS =====
+        this.socket.on('relay:start', ({ targetTime, teams, turnOrder, tallies }) => {
+          audio.init();
+          relayTargetTime = targetTime;
+          relayMyTeam = teams[this.playerId] || 'A';
+
+          document.getElementById('relay-target-badge').textContent = `🎯 TARGET: ${targetTime.toFixed(1)} SECONDS`;
+          document.getElementById('relay-tally-a').textContent = `0.0 / ${targetTime.toFixed(1)}s`;
+          document.getElementById('relay-tally-b').textContent = `0.0 / ${targetTime.toFixed(1)}s`;
+          document.getElementById('relay-progress-a').style.width = '0%';
+          document.getElementById('relay-progress-b').style.width = '0%';
+
+          document.getElementById('relay-turn-input-area').style.display = 'none';
+          document.getElementById('relay-waiting-message').style.display = '';
+          document.getElementById('relay-waiting-message').textContent = 'Starting...';
+          document.getElementById('relay-turn-player').textContent = 'Get Ready!';
+          document.getElementById('relay-turn-label').textContent = 'RELAY COUNTDOWN';
+
+          showScreen('relay-game-screen');
+        });
+
+        this.socket.on('relay:yourTurn', ({ team, currentTally, targetTime, remaining, turnNumber }) => {
+          relayTargetTime = targetTime;
+          document.getElementById('relay-turn-label').textContent = `TURN ${turnNumber} — YOUR TURN!`;
+          document.getElementById('relay-turn-player').textContent = 'Add your time!';
+          document.getElementById('relay-turn-player').style.color = team === 'A' ? '#4a9eff' : '#e63946';
+          document.getElementById('relay-turn-input-area').style.display = '';
+          document.getElementById('relay-waiting-message').style.display = 'none';
+
+          const guessInput = document.getElementById('relay-guess-input');
+          guessInput.value = '';
+          guessInput.disabled = false;
+          guessInput.placeholder = remaining.toFixed(1) + ' left';
+          document.getElementById('relay-guess-submit-btn').disabled = false;
+          document.getElementById('relay-guess-submit-btn').textContent = 'SUBMIT';
+
+          guessInput.focus();
+          audio.buzzerStart();
+        });
+
+        this.socket.on('relay:turnUpdate', ({ team, currentPlayerId, currentPlayerName, currentTally, targetTime, remaining, turnNumber }) => {
+          relayTargetTime = targetTime;
+          const pct = Math.min(100, (currentTally / targetTime) * 100);
+          if (team === 'A') {
+            document.getElementById('relay-progress-a').style.width = pct + '%';
+            document.getElementById('relay-tally-a').textContent = `${currentTally.toFixed(1)} / ${targetTime.toFixed(1)}s`;
+          } else {
+            document.getElementById('relay-progress-b').style.width = pct + '%';
+            document.getElementById('relay-tally-b').textContent = `${currentTally.toFixed(1)} / ${targetTime.toFixed(1)}s`;
+          }
+
+          // If it's not our turn, show waiting
+          if (currentPlayerId !== this.playerId) {
+            const myTeam = this.players.find(p => p.id === this.playerId)?.team;
+            if (team === myTeam) {
+              document.getElementById('relay-turn-label').textContent = `TURN ${turnNumber}`;
+              document.getElementById('relay-turn-player').textContent = currentPlayerName + "'s turn";
+              document.getElementById('relay-turn-player').style.color = team === 'A' ? '#4a9eff' : '#e63946';
+              document.getElementById('relay-turn-input-area').style.display = 'none';
+              document.getElementById('relay-waiting-message').style.display = '';
+              document.getElementById('relay-waiting-message').textContent = `Waiting for ${currentPlayerName}...`;
+            }
+          }
+        });
+
+        this.socket.on('relay:guessDone', ({ team, playerName, turnNumber }) => {
+          // Update progress bars if needed
+          audio.countdownBeep();
+        });
+
+        this.socket.on('relay:guessConfirmed', ({ guess }) => {
+          document.getElementById('relay-turn-input-area').style.display = 'none';
+          document.getElementById('relay-waiting-message').style.display = '';
+          document.getElementById('relay-waiting-message').textContent = '✓ Submitted! Waiting...';
+          audio.buzzerStop();
+        });
+
+        this.socket.on('relay:teamDone', ({ team, totalTurns }) => {
+          const pct = 100;
+          if (team === 'A') {
+            document.getElementById('relay-progress-a').style.width = '100%';
+          } else {
+            document.getElementById('relay-progress-b').style.width = '100%';
+          }
+        });
+
+        this.socket.on('relay:revealStart', ({ targetTime, totalRoundsA, totalRoundsB }) => {
+          document.getElementById('relay-reveal-target').textContent = `🎯 TARGET: ${targetTime.toFixed(1)} SECONDS`;
+          document.getElementById('relay-reveal-rounds').innerHTML = '';
+          showScreen('relay-reveal-screen');
+          audio.goBeep();
+        });
+
+        this.socket.on('relay:revealRound', (data) => {
+          const container = document.getElementById('relay-reveal-rounds');
+          const card = document.createElement('div');
+          card.className = 'relay-reveal-card';
+
+          let aHTML = '<div class="reveal-team-entry" style="opacity:0.3;"><div class="reveal-player">—</div></div>';
+          let bHTML = '<div class="reveal-team-entry" style="opacity:0.3;"><div class="reveal-player">—</div></div>';
+
+          if (data.teamA) {
+            const a = data.teamA;
+            aHTML = `<div class="reveal-team-entry" style="border-left: 4px solid #4a9eff;">
+              <div class="reveal-player" style="color:#4a9eff;">${a.playerName}</div>
+              <div class="reveal-guess" style="color:#fff;">+${a.guess.toFixed(1)}s</div>
+              <div class="reveal-total">Running: ${a.runningTotal.toFixed(1)} / ${a.targetTime.toFixed(1)}s</div>
+            </div>`;
+          }
+
+          if (data.teamB) {
+            const b = data.teamB;
+            bHTML = `<div class="reveal-team-entry" style="border-left: 4px solid #e63946;">
+              <div class="reveal-player" style="color:#e63946;">${b.playerName}</div>
+              <div class="reveal-guess" style="color:#fff;">+${b.guess.toFixed(1)}s</div>
+              <div class="reveal-total">Running: ${b.runningTotal.toFixed(1)} / ${b.targetTime.toFixed(1)}s</div>
+            </div>`;
+          }
+
+          card.innerHTML = `<div class="label" style="grid-column:1/-1; text-align:center; margin-bottom:4px;">Round ${data.roundNumber}</div>${aHTML}${bHTML}`;
+          container.appendChild(card);
+
+          // Scroll into view
+          container.scrollTop = container.scrollHeight;
+          audio.countdownBeep();
+        });
+
+        this.socket.on('relay:finalReveal', (data) => {
+          const { targetTime, teamA, teamB, winner } = data;
+
+          document.getElementById('relay-final-target').textContent = `🎯 TARGET: ${targetTime.toFixed(1)} SECONDS`;
+
+          if (winner === 'A') {
+            document.getElementById('relay-winner-text').textContent = '🔵 TEAM A WINS!';
+            document.getElementById('relay-winner-text').style.color = '#4a9eff';
+          } else if (winner === 'B') {
+            document.getElementById('relay-winner-text').textContent = '🔴 TEAM B WINS!';
+            document.getElementById('relay-winner-text').style.color = '#e63946';
+          } else {
+            document.getElementById('relay-winner-text').textContent = "IT'S A TIE!";
+            document.getElementById('relay-winner-text').style.color = 'var(--gold)';
+          }
+
+          const compEl = document.getElementById('relay-final-comparison');
+          const diffColorA = teamA.diff < 1 ? 'var(--green)' : teamA.diff < 3 ? 'var(--gold)' : 'var(--red)';
+          const diffColorB = teamB.diff < 1 ? 'var(--green)' : teamB.diff < 3 ? 'var(--gold)' : 'var(--red)';
+
+          compEl.innerHTML = `
+            <div class="relay-final-team ${winner === 'A' ? 'winner' : ''}">
+              <div class="team-name" style="color:#4a9eff;">🔵 Team A</div>
+              <div class="team-tally" style="color:#fff;">${teamA.finalTally.toFixed(1)}s</div>
+              <div class="team-diff" style="color:${diffColorA};">±${teamA.diff.toFixed(2)}s off</div>
+            </div>
+            <div class="relay-vs">VS</div>
+            <div class="relay-final-team ${winner === 'B' ? 'winner' : ''}">
+              <div class="team-name" style="color:#e63946;">🔴 Team B</div>
+              <div class="team-tally" style="color:#fff;">${teamB.finalTally.toFixed(1)}s</div>
+              <div class="team-diff" style="color:${diffColorB};">±${teamB.diff.toFixed(2)}s off</div>
+            </div>
+          `;
+
+          // Breakdowns
+          const renderBreakdown = (history, containerId) => {
+            const el = document.getElementById(containerId);
+            el.innerHTML = '';
+            history.forEach((entry, i) => {
+              const row = document.createElement('div');
+              row.className = 'relay-breakdown-row';
+              row.innerHTML = `
+                <div style="color:var(--text-muted);">${i + 1}</div>
+                <div style="color:${entry.playerColor};">${entry.playerName}</div>
+                <div style="color:var(--gold);">+${entry.guess.toFixed(1)}s</div>
+                <div style="color:var(--text-secondary);">${entry.runningTotal.toFixed(1)}s</div>
+              `;
+              el.appendChild(row);
+            });
+          };
+
+          renderBreakdown(teamA.history, 'relay-breakdown-a');
+          renderBreakdown(teamB.history, 'relay-breakdown-b');
+
+          // Show play again for host
+          const playBtn = document.getElementById('relay-play-again-btn');
+          if (this.isHost) {
+            playBtn.style.display = '';
+          } else {
+            playBtn.style.display = 'none';
+          }
+
+          showScreen('relay-final-screen');
+          launchConfetti();
+          audio.victory();
+        });
+      }
+
+      // Team assignment UI helper
+      updateTeamAssignmentUI(teams) {
+        if (!this.isHost) return;
+        const teamAEl = document.getElementById('team-a-players');
+        const teamBEl = document.getElementById('team-b-players');
+        if (!teamAEl || !teamBEl) return;
+
+        teamAEl.innerHTML = '';
+        teamBEl.innerHTML = '';
+
+        this.players.forEach(p => {
+          const team = teams[p.id] || 'A';
+          const chip = document.createElement('div');
+          chip.className = 'team-player-chip';
+          chip.innerHTML = `<div class="chip-dot" style="background:${p.color};"></div>${p.name}`;
+          chip.addEventListener('click', () => {
+            // Toggle team
+            const currentTeam = teams[p.id] || 'A';
+            const newTeam = currentTeam === 'A' ? 'B' : 'A';
+            teams[p.id] = newTeam;
+            const assignments = Object.entries(teams).map(([playerId, t]) => ({ playerId, team: t }));
+            net.socket.emit('room:setTeams', { assignments });
+          });
+
+          if (team === 'A') {
+            teamAEl.appendChild(chip);
+          } else {
+            teamBEl.appendChild(chip);
+          }
+        });
       }
 
       createRoom(playerName, settings) {
@@ -1687,23 +2247,62 @@ body::after {
         document.getElementById('online-custom-time-input').value = this.settings.customTime;
         document.getElementById('online-blind-min-input').value = this.settings.blindMin;
         document.getElementById('online-blind-max-input').value = this.settings.blindMax;
+        document.getElementById('online-team-mode-toggle').checked = !!this.settings.teamMode;
+        document.getElementById('online-team-scoring-select').value = this.settings.teamScoringRule || 'sum';
+        document.getElementById('online-relay-target-input').value = this.settings.relayTarget || 30;
         
-        document.getElementById('online-time-mode-group').style.display = this.settings.gameMode === 'blindguess' ? 'none' : '';
-        document.getElementById('online-custom-time-group').style.display = (this.settings.gameMode !== 'blindguess' && this.settings.timeMode === 'custom') ? '' : 'none';
-        document.getElementById('online-blind-range-group').style.display = this.settings.gameMode === 'blindguess' ? '' : 'none';
+        // Use the shared visibility function (defined later, but it will exist by the time this runs)
+        if (typeof updateHostModeVisibility === 'function') {
+          updateHostModeVisibility();
+        }
       }
 
       updateGuestSettingsUI() {
-        const modeLabel = this.settings.gameMode === 'blindguess' ? '🙉 Blind Guess' : '⏱ Time Attack';
-        document.getElementById('guest-setting-mode').textContent = modeLabel;
-        document.getElementById('guest-setting-rounds').textContent = `${this.settings.totalRounds} Rounds`;
+        const modeLabels = {
+          'timeattack': '⏱ Time Attack',
+          'blindguess': '🙉 Blind Guess',
+          'relaycountdown': '🔄 Relay Countdown'
+        };
+        document.getElementById('guest-setting-mode').textContent = modeLabels[this.settings.gameMode] || 'Time Attack';
+        document.getElementById('guest-setting-rounds').textContent = this.settings.gameMode === 'relaycountdown' 
+          ? '1 Match' 
+          : `${this.settings.totalRounds} Rounds`;
         
         const timeRow = document.getElementById('guest-setting-time-row');
-        if (this.settings.gameMode === 'blindguess') {
+        if (this.settings.gameMode === 'relaycountdown') {
+          timeRow.innerHTML = `🎯 Target Total: <span style="color: var(--gold);">${this.settings.relayTarget || 30}s</span>`;
+        } else if (this.settings.gameMode === 'blindguess') {
           timeRow.innerHTML = `🎯 Target Window: <span style="color: var(--gold);">${this.settings.blindMin} - ${this.settings.blindMax}s</span>`;
         } else {
           const timeVal = this.settings.timeMode === 'custom' ? `${this.settings.customTime}s` : 'Random';
           timeRow.innerHTML = `🎯 Target: <span style="color: var(--gold);">${timeVal}</span>`;
+        }
+
+        // Team info
+        const teamRow = document.getElementById('guest-setting-team-row');
+        const teamRoster = document.getElementById('guest-team-roster');
+        if (this.settings.teamMode) {
+          teamRow.style.display = '';
+          document.getElementById('guest-setting-team').textContent = 
+            this.settings.gameMode === 'relaycountdown' ? 'Required' : 'Enabled';
+          
+          // Show team roster
+          teamRoster.style.display = '';
+          const teamA = this.players.filter(p => p.team === 'A');
+          const teamB = this.players.filter(p => p.team === 'B');
+          teamRoster.innerHTML = `
+            <div class="guest-team-col">
+              <div class="team-badge team-a">🔵 Team A</div>
+              ${teamA.map(p => `<div style="color:${p.color};">${p.name}</div>`).join('')}
+            </div>
+            <div class="guest-team-col">
+              <div class="team-badge team-b">🔴 Team B</div>
+              ${teamB.map(p => `<div style="color:${p.color};">${p.name}</div>`).join('')}
+            </div>
+          `;
+        } else {
+          teamRow.style.display = 'none';
+          teamRoster.style.display = 'none';
         }
       }
 
@@ -1739,6 +2338,8 @@ body::after {
 
     const net = new NetworkClient();
     let isOnlineMode = false;
+    let relayTargetTime = 30;
+    let relayMyTeam = 'A';
 
     // ===== SCREEN MANAGEMENT =====
     function showScreen(screenId) {
@@ -1829,6 +2430,9 @@ body::after {
     const onlineCustomTimeInput = document.getElementById('online-custom-time-input');
     const onlineBlindMinInput = document.getElementById('online-blind-min-input');
     const onlineBlindMaxInput = document.getElementById('online-blind-max-input');
+    const onlineTeamModeToggle = document.getElementById('online-team-mode-toggle');
+    const onlineTeamScoringSelect = document.getElementById('online-team-scoring-select');
+    const onlineRelayTargetInput = document.getElementById('online-relay-target-input');
 
     function emitSettingsUpdate() {
       if (!net.isHost) return;
@@ -1838,15 +2442,43 @@ body::after {
         timeMode: onlineTimeModeSelect.value,
         customTime: parseFloat(onlineCustomTimeInput.value) || 4.0,
         blindMin: parseFloat(onlineBlindMinInput.value) || 3,
-        blindMax: parseFloat(onlineBlindMaxInput.value) || 15
+        blindMax: parseFloat(onlineBlindMaxInput.value) || 15,
+        teamMode: onlineTeamModeToggle.checked,
+        teamScoringRule: onlineTeamScoringSelect.value,
+        relayTarget: parseFloat(onlineRelayTargetInput.value) || 30
       });
     }
 
-    onlineGameModeSelect.addEventListener('change', () => {
-      const isBlind = onlineGameModeSelect.value === 'blindguess';
-      document.getElementById('online-time-mode-group').style.display = isBlind ? 'none' : '';
-      document.getElementById('online-custom-time-group').style.display = (!isBlind && onlineTimeModeSelect.value === 'custom') ? '' : 'none';
+    function updateHostModeVisibility() {
+      const mode = onlineGameModeSelect.value;
+      const isBlind = mode === 'blindguess';
+      const isRelay = mode === 'relaycountdown';
+      const isTeam = onlineTeamModeToggle.checked;
+
+      // Show/hide mode-specific settings
+      document.getElementById('online-time-mode-group').style.display = (isBlind || isRelay) ? 'none' : '';
+      document.getElementById('online-custom-time-group').style.display = (!isBlind && !isRelay && onlineTimeModeSelect.value === 'custom') ? '' : 'none';
       document.getElementById('online-blind-range-group').style.display = isBlind ? '' : 'none';
+      document.getElementById('online-relay-target-group').style.display = isRelay ? '' : 'none';
+
+      // Rounds: hide for relay
+      document.getElementById('online-rounds-select').closest('.setting-group').style.display = isRelay ? 'none' : '';
+
+      // Team mode: force on for relay
+      if (isRelay) {
+        onlineTeamModeToggle.checked = true;
+        onlineTeamModeToggle.disabled = true;
+      } else {
+        onlineTeamModeToggle.disabled = false;
+      }
+
+      const teamEnabled = onlineTeamModeToggle.checked;
+      document.getElementById('online-team-scoring-group').style.display = (teamEnabled && !isRelay) ? '' : 'none';
+      document.getElementById('online-team-assignment').style.display = teamEnabled ? '' : 'none';
+    }
+
+    onlineGameModeSelect.addEventListener('change', () => {
+      updateHostModeVisibility();
       emitSettingsUpdate();
     });
 
@@ -1858,6 +2490,42 @@ body::after {
     onlineCustomTimeInput.addEventListener('input', emitSettingsUpdate);
     onlineBlindMinInput.addEventListener('input', emitSettingsUpdate);
     onlineBlindMaxInput.addEventListener('input', emitSettingsUpdate);
+    onlineRelayTargetInput.addEventListener('input', emitSettingsUpdate);
+
+    onlineTeamModeToggle.addEventListener('change', () => {
+      updateHostModeVisibility();
+      emitSettingsUpdate();
+      // Auto-balance when enabling teams
+      if (onlineTeamModeToggle.checked) {
+        net.socket.emit('room:autoBalance');
+      }
+    });
+
+    onlineTeamScoringSelect.addEventListener('change', emitSettingsUpdate);
+
+    document.getElementById('auto-balance-btn').addEventListener('click', () => {
+      net.socket.emit('room:autoBalance');
+    });
+
+    // Relay guess submit
+    document.getElementById('relay-guess-submit-btn').addEventListener('click', () => {
+      const input = document.getElementById('relay-guess-input');
+      const val = parseFloat(input.value);
+      if (isNaN(val) || val < 0) {
+        input.style.borderColor = 'var(--red)';
+        setTimeout(() => { input.style.borderColor = ''; }, 600);
+        return;
+      }
+      input.disabled = true;
+      document.getElementById('relay-guess-submit-btn').disabled = true;
+      document.getElementById('relay-guess-submit-btn').textContent = '✓ SENT';
+      net.socket.emit('relay:guess', { guess: val });
+    });
+
+    // Relay play again
+    document.getElementById('relay-play-again-btn').addEventListener('click', () => {
+      net.playAgain();
+    });
 
     // Host Start Game
     document.getElementById('online-start-game-btn').addEventListener('click', () => {
