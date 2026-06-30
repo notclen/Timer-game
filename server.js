@@ -51,6 +51,23 @@ io.on('connection', (socket) => {
     console.log(`  Room ${code} created by ${playerName}`);
   });
 
+  // --- RECONNECT PLAYER ---
+  socket.on('room:reconnect', ({ code, playerId }) => {
+    const roomCode = (code || '').toUpperCase().trim();
+    const room = rooms.get(roomCode);
+    if (!room) return;
+    const player = room.players.find(p => p.id === playerId);
+    if (player) {
+      player.socketId = socket.id;
+      player.connected = true;
+      socket.playerId = playerId;
+      socket.roomCode = roomCode;
+      socket.join(roomCode);
+      console.log(`[Reconnected] Player ${player.name} reassociated with socket ${socket.id} in room ${roomCode}`);
+      room.broadcastPlayerList();
+    }
+  });
+
   // --- JOIN ROOM ---
   socket.on('room:join', ({ code, playerName }) => {
     const roomCode = (code || '').toUpperCase().trim();
@@ -157,10 +174,25 @@ io.on('connection', (socket) => {
     if (room) room.handleBlindGuess(socket.playerId, guess);
   });
 
-  // --- RELAY COUNTDOWN ---
   socket.on('relay:guess', ({ guess }) => {
     const room = rooms.get(socket.roomCode);
     if (room) room.handleRelayGuess(socket.playerId, guess);
+  });
+
+  socket.on('relay:revealNext', () => {
+    const room = rooms.get(socket.roomCode);
+    if (!room) return;
+    const player = room.players.find(p => p.id === socket.playerId);
+    if (!player || !player.isHost) return;
+    room.revealNextRound();
+  });
+
+  socket.on('relay:revealAuto', () => {
+    const room = rooms.get(socket.roomCode);
+    if (!room) return;
+    const player = room.players.find(p => p.id === socket.playerId);
+    if (!player || !player.isHost) return;
+    room.revealAutoRounds();
   });
 
   // --- NEXT ROUND / END (host only) ---
