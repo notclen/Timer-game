@@ -111,7 +111,7 @@ class Room {
 
     // If all disconnected, schedule cleanup
     if (this.players.every(p => !p.connected)) {
-      this.destroyTimeout = setTimeout(() => {}, 300000);
+      this.destroyTimeout = setTimeout(() => { }, 300000);
     }
 
     // If game in progress, auto-submit for disconnected player
