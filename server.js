@@ -112,6 +112,23 @@ io.on('connection', (socket) => {
     room.updateSettings(settings);
   });
 
+  // --- TEAM MANAGEMENT (host only) ---
+  socket.on('room:setTeams', ({ assignments }) => {
+    const room = rooms.get(socket.roomCode);
+    if (!room) return;
+    const player = room.players.find(p => p.id === socket.playerId);
+    if (!player || !player.isHost) return;
+    room.setTeams(assignments);
+  });
+
+  socket.on('room:autoBalance', () => {
+    const room = rooms.get(socket.roomCode);
+    if (!room) return;
+    const player = room.players.find(p => p.id === socket.playerId);
+    if (!player || !player.isHost) return;
+    room.autoBalanceTeams();
+  });
+
   // --- START GAME (host only) ---
   socket.on('game:start', () => {
     const room = rooms.get(socket.roomCode);
@@ -138,6 +155,12 @@ io.on('connection', (socket) => {
   socket.on('blind:guess', ({ guess }) => {
     const room = rooms.get(socket.roomCode);
     if (room) room.handleBlindGuess(socket.playerId, guess);
+  });
+
+  // --- RELAY COUNTDOWN ---
+  socket.on('relay:guess', ({ guess }) => {
+    const room = rooms.get(socket.roomCode);
+    if (room) room.handleRelayGuess(socket.playerId, guess);
   });
 
   // --- NEXT ROUND / END (host only) ---
