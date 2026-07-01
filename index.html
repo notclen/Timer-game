@@ -898,7 +898,27 @@ html, body {
 @keyframes scaleUp {
   from { transform: scale(0.9) translateY(10px); opacity: 0; }
   to { transform: scale(1) translateY(0); opacity: 1; }
-}
+/* ===== STATISTICS SCREEN ===== */
+#stats-screen { justify-content: flex-start; padding-top: 40px; }
+.stats-container { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: 20px; z-index: 2; }
+.chart-panel { padding: 0; }
+.chart-panel .panel-header { margin-bottom: 0; }
+.chart-canvas-wrapper { width: 100%; background: var(--bg-card); padding: 24px; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center; padding: 14px; background: var(--bg-card-alt); border-top: 4px solid var(--border-subtle); }
+.legend-item { display: flex; align-items: center; gap: 8px; font-family: var(--font-heading); font-size: 0.85rem; }
+.legend-dot { width: 14px; height: 14px; border: 2.5px solid var(--border-subtle); border-radius: 4px; }
+
+.player-stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; background: transparent; border: none; }
+.player-stat-card { background: var(--bg-card); padding: 18px; border: 3px solid var(--border-subtle) !important; border-top: 8px solid !important; border-radius: var(--radius-sm) !important; box-shadow: 0 4px 0 rgba(0,0,0,0.15); }
+.player-stat-card .stat-name { font-family: var(--font-heading); font-size: 1.2rem; margin-bottom: 12px; }
+.stat-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 2px dashed rgba(255,255,255,0.08); }
+.stat-row:last-of-type { border-bottom: none; }
+.stat-label { font-size: 0.85rem; color: var(--text-secondary); font-family: var(--font-heading); }
+.stat-value { font-family: var(--font-heading); font-size: 0.95rem; }
+.stat-value.good { color: var(--green); } .stat-value.ok { color: var(--gold); } .stat-value.bad { color: var(--red); }
+
+.accuracy-bar-bg { width: 100%; height: 10px; background: var(--border-subtle); margin-top: 14px; border-radius: 5px; overflow: hidden; }
+.accuracy-bar-fill { height: 100%; border-radius: 5px; }
 
 </style>
   <script src="/socket.io/socket.io.js"></script>
@@ -1536,7 +1556,7 @@ html, body {
             dot.style.boxShadow = `0 0 30px 6px ${color}`;
           }
           
-          dot.addEventListener('click', () => {
+          const selectDot = () => {
             grid.querySelectorAll('.color-picker-dot').forEach(d => {
               d.classList.remove('active');
               d.style.boxShadow = '';
@@ -1544,6 +1564,11 @@ html, body {
             dot.classList.add('active');
             dot.style.boxShadow = `0 0 30px 6px ${color}`;
             activeCurrentColor = color;
+          };
+          dot.addEventListener('click', selectDot);
+          dot.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            selectDot();
           });
         }
         
@@ -1557,11 +1582,16 @@ html, body {
       document.getElementById('color-picker-modal').style.display = 'none';
     }
 
-    document.getElementById('color-picker-close-btn').addEventListener('click', () => {
+    const confirmColorSelection = () => {
       if (activeColorCallback && activeCurrentColor) {
         activeColorCallback(activeCurrentColor);
       }
       closeColorPicker();
+    };
+    document.getElementById('color-picker-close-btn').addEventListener('click', confirmColorSelection);
+    document.getElementById('color-picker-close-btn').addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      confirmColorSelection();
     });
 
     // ===== AUDIO ENGINE =====
@@ -2005,11 +2035,16 @@ html, body {
               colorDot.style.cursor = 'pointer';
               colorDot.style.border = '2px dashed rgba(255,255,255,0.7)';
               colorDot.title = 'Click to change color';
-              colorDot.addEventListener('click', () => {
+              const openPicker = () => {
                 const takenColors = this.players.filter(pl => pl.id !== this.playerId).map(pl => pl.color);
                 openColorPicker(p.color, (newColor) => {
                   this.socket.emit('player:updateColor', { color: newColor });
                 }, takenColors);
+              };
+              colorDot.addEventListener('click', openPicker);
+              colorDot.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                openPicker();
               });
             }
             
@@ -2562,7 +2597,7 @@ html, body {
           teamAHeader.innerHTML = `<span class="team-color-indicator" style="display:inline-block; width:14px; height:14px; border-radius:50%; background:${this.teamColors.A}; margin-right:8px; border: 2px solid #fff; cursor: pointer;" title="Change Team A color"></span>Team A`;
           
           const dotA = teamAHeader.querySelector('.team-color-indicator');
-          dotA.addEventListener('click', (e) => {
+          const openTeamAPicker = (e) => {
             e.stopPropagation();
             openColorPicker(
               this.teamColors.A,
@@ -2571,6 +2606,11 @@ html, body {
               TEAM_COLORS_PALETTE,
               "Choose Team A colour:"
             );
+          };
+          dotA.addEventListener('click', openTeamAPicker);
+          dotA.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            openTeamAPicker(e);
           });
 
           // Check if I am Team B captain (first player on Team B)
@@ -2580,7 +2620,7 @@ html, body {
           if (isTeamBCaptain) {
             teamBHeader.innerHTML = `<span class="team-color-indicator" style="display:inline-block; width:14px; height:14px; border-radius:50%; background:${this.teamColors.B}; margin-right:8px; border: 2px solid #fff; cursor: pointer;" title="Change Team B color"></span>Team B`;
             const dotB = teamBHeader.querySelector('.team-color-indicator');
-            dotB.addEventListener('click', (e) => {
+            const openTeamBPicker = (e) => {
               e.stopPropagation();
               openColorPicker(
                 this.teamColors.B,
@@ -2589,6 +2629,11 @@ html, body {
                 TEAM_COLORS_PALETTE,
                 "Choose Team B colour:"
               );
+            };
+            dotB.addEventListener('click', openTeamBPicker);
+            dotB.addEventListener('touchstart', (e) => {
+              e.preventDefault();
+              openTeamBPicker(e);
             });
           } else {
             teamBHeader.innerHTML = `<span class="team-color-indicator" style="display:inline-block; width:14px; height:14px; border-radius:50%; background:${this.teamColors.B}; margin-right:8px;" title="Team B color"></span>Team B`;
@@ -2609,12 +2654,17 @@ html, body {
             dot.style.cursor = 'pointer';
             dot.style.border = '1px dashed rgba(255,255,255,0.7)';
             dot.title = 'Click to change color';
-            dot.addEventListener('click', (e) => {
+            const openChipPicker = (e) => {
               e.stopPropagation();
               const takenColors = this.players.filter(pl => pl.id !== this.playerId).map(pl => pl.color);
               openColorPicker(p.color, (newColor) => {
                 this.socket.emit('player:updateColor', { color: newColor });
               }, takenColors);
+            };
+            dot.addEventListener('click', openChipPicker);
+            dot.addEventListener('touchstart', (e) => {
+              e.preventDefault();
+              openChipPicker(e);
             });
           }
 
@@ -2675,6 +2725,7 @@ html, body {
 
       leaveRoom() {
         if (this.socket) {
+          this.socket.emit('room:leave');
           this.socket.disconnect();
           this.socket = null;
         }
@@ -3095,7 +3146,7 @@ html, body {
       color.style.background = nextAvailableColor;
       color.style.cursor = 'pointer';
       color.title = 'Click to change color';
-      color.addEventListener('click', () => {
+      const openLocalPicker = () => {
         const currentIdx = parseInt(row.dataset.index);
         const curColor = PLAYER_COLORS[currentIdx];
         
@@ -3109,6 +3160,11 @@ html, body {
           PLAYER_COLORS[currentIdx] = newColor;
           color.style.background = newColor;
         }, takenColors);
+      };
+      color.addEventListener('click', openLocalPicker);
+      color.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        openLocalPicker();
       });
 
       const input = document.createElement('input');
