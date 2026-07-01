@@ -1,9 +1,26 @@
 // ===== Room.js — Server-side game room state machine =====
 
 const PLAYER_COLORS = [
-  '#4a9eff', '#e63946', '#ffc312', '#2ed573',
-  '#a55eea', '#ff9f43', '#1abc9c', '#ff6b81',
-  '#6c5ce7', '#fdcb6e', '#00b894', '#e17055'
+  '#F0D330', // Holland Yellow (HY)
+  '#F6A91B', // Dark Yellow (DY)
+  '#E17539', // Orange (OR)
+  '#E74C13', // Woods Orange (WO)
+  '#C1237F', // Fuchsia (FU)
+  '#6E222A', // Burgundy (BU)
+  '#A0232B', // Dark Red (DR)
+  '#662473', // Purple (PU)
+  '#74BC3A', // Gecko Green (GC)
+  '#21A83E', // Spring Green (SG)
+  '#0E8497', // Teal (TE)
+  '#0B564E', // Green (GR)
+  '#094034', // Kentucky Green (KG)
+  '#1AB0D4', // Arizona Turquoise (AT)
+  '#208BCD', // Cyan (CY)
+  '#2E4CA2', // Blue (BL)
+  '#155A7E', // Cobalt Blue (CB)
+  '#91969B', // Light Grey (LGY)
+  '#3A2E1C', // Brown (BR)
+  '#C9AD7B'  // Tan (TA)
 ];
 
 const MAX_PLAYERS = 12;
@@ -42,6 +59,7 @@ class Room {
 
     // Team state
     this.teams = {};  // playerId -> 'A' | 'B'
+    this.teamColors = { A: '#3B82F6', B: '#EF4444' };
 
     // Relay Countdown state
     this.relayTeamTallies = { A: 0, B: 0 };
@@ -166,7 +184,8 @@ class Room {
         id: p.id, name: p.name, color: p.color,
         connected: p.connected, isHost: p.isHost,
         team: this.teams[p.id] || null
-      }))
+      })),
+      teamColors: this.teamColors
     });
   }
 
@@ -237,6 +256,16 @@ class Room {
 
   getTeamPlayers(team) {
     return this.players.filter(p => this.teams[p.id] === team);
+  }
+
+  getTeamCaptainId(team) {
+    if (team === 'A') {
+      const host = this.players.find(p => p.isHost);
+      return host ? host.id : null;
+    } else {
+      const firstB = this.players.find(p => this.teams[p.id] === 'B');
+      return firstB ? firstB.id : null;
+    }
   }
 
   getTeamScores() {
@@ -338,7 +367,7 @@ class Room {
         this.countdownTimeouts.push(setTimeout(() => {
           this.state = 'PLAYING';
           if (this.settings.gameMode === 'blindguess') {
-            this.startBlindTimer();
+            this.runBlindPreCountdown();
           } else {
             this.broadcast('round:play', {});
           }
@@ -347,6 +376,23 @@ class Room {
     };
 
     this.countdownTimeouts.push(setTimeout(tick, 500));
+  }
+
+  runBlindPreCountdown() {
+    let preCount = 3;
+    this.broadcast('blind:preCountdownStart', {});
+
+    const preTick = () => {
+      if (preCount > 0) {
+        this.broadcast('blind:preCountdownTick', { value: preCount });
+        preCount--;
+        this.countdownTimeouts.push(setTimeout(preTick, 1000));
+      } else {
+        this.startBlindTimer();
+      }
+    };
+
+    preTick();
   }
 
   // ===== TARGET BUZZER MODE =====
