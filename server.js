@@ -1,4 +1,4 @@
-// ===== server.js — Time Attack Multiplayer Server =====
+// ===== server.js — TIMEiT Multiplayer Server =====
 
 const express = require('express');
 const http = require('http');
@@ -79,12 +79,12 @@ io.on('connection', (socket) => {
     }
 
     // Reconnection attempt
-    if (room.state !== 'LOBBY') {
-      const existing = room.players.find(p =>
-        p.name.toLowerCase() === (playerName || '').toLowerCase() && !p.connected
-      );
-      if (existing) {
-        room.reconnectPlayer(existing.id, socket);
+    const existing = room.players.find(p =>
+      p.name.toLowerCase() === (playerName || '').toLowerCase() && !p.connected
+    );
+    if (existing) {
+      room.reconnectPlayer(existing.id, socket);
+      if (room.state !== 'LOBBY') {
         socket.emit('room:rejoined', {
           code: roomCode,
           playerId: existing.id,
@@ -94,9 +94,18 @@ io.on('connection', (socket) => {
           totalRounds: room.settings.totalRounds,
           scores: room.scores
         });
-        console.log(`  ${playerName} reconnected to ${roomCode}`);
-        return;
+      } else {
+        socket.emit('room:joined', {
+          code: roomCode,
+          playerId: existing.id,
+          settings: room.settings
+        });
       }
+      console.log(`  ${playerName} reconnected to ${roomCode}`);
+      return;
+    }
+
+    if (room.state !== 'LOBBY') {
       socket.emit('room:error', { message: 'Game already in progress.' });
       return;
     }
@@ -129,6 +138,17 @@ io.on('connection', (socket) => {
     room.updateSettings(settings);
   });
 
+  // --- PLAYER COLOR UPDATE (any player) ---
+  socket.on('player:updateColor', ({ color }) => {
+    const room = rooms.get(socket.roomCode);
+    if (!room) return;
+    const player = room.players.find(p => p.id === socket.playerId);
+    if (!player) return;
+    player.color = color;
+    console.log(`[Color Update] Player ${player.name} in Room ${socket.roomCode} changed color to ${color}`);
+    room.broadcastPlayerList();
+  });
+
   // --- TEAM MANAGEMENT (host only) ---
   socket.on('room:setTeams', ({ assignments }) => {
     const room = rooms.get(socket.roomCode);
@@ -136,6 +156,22 @@ io.on('connection', (socket) => {
     const player = room.players.find(p => p.id === socket.playerId);
     if (!player || !player.isHost) return;
     room.setTeams(assignments);
+  });
+
+  // --- TEAM COLOR SELECTION (captain only) ---
+  socket.on('room:setTeamColor', ({ team, color }) => {
+    const room = rooms.get(socket.roomCode);
+    if (!room) return;
+    
+    const captainId = room.getTeamCaptainId(team);
+    if (socket.playerId !== captainId) {
+      console.log(`[Team Color] Unauthorized color change attempt by ${socket.playerId} for team ${team}`);
+      return;
+    }
+    
+    room.teamColors[team] = color;
+    console.log(`[Team Color] Team ${team} color changed to ${color} by captain in Room ${socket.roomCode}`);
+    room.broadcastPlayerList();
   });
 
   socket.on('room:autoBalance', () => {
@@ -243,5 +279,5 @@ setInterval(() => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`\n⚡ Time Attack server running on http://localhost:${PORT}\n`);
+  console.log(`\n⚡ TIMEiT server running on http://localhost:${PORT}\n`);
 });
