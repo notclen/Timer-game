@@ -1544,11 +1544,6 @@ html, body {
             dot.classList.add('active');
             dot.style.boxShadow = `0 0 30px 6px ${color}`;
             activeCurrentColor = color;
-            
-            if (activeColorCallback) {
-              activeColorCallback(color);
-            }
-            closeColorPicker();
           });
         }
         
@@ -1562,7 +1557,12 @@ html, body {
       document.getElementById('color-picker-modal').style.display = 'none';
     }
 
-    document.getElementById('color-picker-close-btn').addEventListener('click', closeColorPicker);
+    document.getElementById('color-picker-close-btn').addEventListener('click', () => {
+      if (activeColorCallback && activeCurrentColor) {
+        activeColorCallback(activeCurrentColor);
+      }
+      closeColorPicker();
+    });
 
     // ===== AUDIO ENGINE =====
     class AudioEngine {
@@ -4104,11 +4104,12 @@ html, body {
       showScreen('setup-screen');
     });
 
-    // ===== PREVENT DOUBLE-TAP ZOOM ON MOBILE =====
+    // ===== PREVENT DOUBLE-TAP ZOOM & OPTIMIZE TOUCH CLICKS ON MOBILE =====
     document.addEventListener('touchend', (e) => {
-      if (e.target.closest('button')) {
+      const clickable = e.target.closest('button, .player-color, .color-picker-dot, .chip-dot, .team-color-indicator');
+      if (clickable) {
         e.preventDefault();
-        e.target.closest('button').click();
+        clickable.click();
       }
     }, { passive: false });
 
