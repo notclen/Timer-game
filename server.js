@@ -256,6 +256,13 @@ io.on('connection', (socket) => {
     room.returnToLobby();
   });
 
+  socket.on('room:leave', () => {
+    const room = rooms.get(socket.roomCode);
+    if (room) {
+      room.removePlayer(socket.playerId);
+    }
+  });
+
   // --- DISCONNECT ---
   socket.on('disconnect', () => {
     console.log(`[-] ${socket.id}`);
