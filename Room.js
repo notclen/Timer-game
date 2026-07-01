@@ -135,37 +135,19 @@ class Room {
   disconnectPlayer(socketId) {
     const player = this.players.find(p => p.socketId === socketId);
     if (!player) return;
+    player.connected = false;
+    this.lastActivity = Date.now();
 
-    if (this.state === 'LOBBY') {
-      // Remove player entirely if in LOBBY state
-      this.players = this.players.filter(p => p.socketId !== socketId);
-      delete this.scores[player.id];
-      delete this.teams[player.id];
-
-      // Reassign host if they were the host
-      if (player.isHost) {
-        const newHost = this.players.find(p => p.connected);
-        if (newHost) {
-          newHost.isHost = true;
-          this.io.to(newHost.socketId).emit('room:youAreHost');
-        }
-      }
-    } else {
-      // Game in progress — just mark disconnected to allow reconnection
-      player.connected = false;
-
-      // Reassign host if needed
-      if (player.isHost) {
-        player.isHost = false;
-        const newHost = this.players.find(p => p.connected);
-        if (newHost) {
-          newHost.isHost = true;
-          this.io.to(newHost.socketId).emit('room:youAreHost');
-        }
+    // Reassign host if needed
+    if (player.isHost) {
+      player.isHost = false;
+      const newHost = this.players.find(p => p.connected);
+      if (newHost) {
+        newHost.isHost = true;
+        this.io.to(newHost.socketId).emit('room:youAreHost');
       }
     }
 
-    this.lastActivity = Date.now();
     this.broadcastPlayerList();
     this.broadcast('room:playerDisconnected', { playerId: player.id, playerName: player.name });
 
@@ -178,6 +160,29 @@ class Room {
     if (this.state === 'PLAYING' || this.state === 'WAITING_GUESSES') {
       this.checkAllPlayersDone();
     }
+  }
+
+  removePlayer(playerId) {
+    const playerIndex = this.players.findIndex(p => p.id === playerId);
+    if (playerIndex === -1) return;
+    const player = this.players[playerIndex];
+    this.players.splice(playerIndex, 1);
+    delete this.scores[playerId];
+    delete this.teams[playerId];
+
+    // Reassign host if they were the host
+    if (player.isHost) {
+      const newHost = this.players.find(p => p.connected);
+      if (newHost) {
+        newHost.isHost = true;
+        this.io.to(newHost.socketId).emit('room:youAreHost');
+      }
+    }
+
+    this.lastActivity = Date.now();
+    this.broadcastPlayerList();
+    this.broadcast('room:playerDisconnected', { playerId: player.id, playerName: player.name });
+  }
 
     // Relay: if it was their turn, auto-submit 0
     if (this.state === 'RELAY_PLAYING') {
